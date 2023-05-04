@@ -8,6 +8,8 @@
 
 ## Introduction
 
+![Lux power distribution card](images/power-flow-card.png "Lux power distribution card")
+
 This is a custom Lovelace card for the Home Assistant. The card aims to recreate the power distribution card shown on the LuxpowerTek app and website, with a few small changes (and hopefully at some point, some improvements).
 
 The card is far from complete, so please bear with the development process.
