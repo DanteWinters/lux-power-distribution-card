@@ -89,14 +89,145 @@ class LuxPowerDistributionCard extends HTMLElement {
     ) {
       this.createCard();
     }
-    // this._updateStates();
+    this.updateStates();
+  }
+
+  updateStates() {
+    this.updateBattery();
+    this.updateSolar();
+    this.updateGrid();
+    this.updateHome();
+    this.updateAllocatedPower();
+  }
+
+  updateBattery() {
+    const battery_arrow_element = this.card.querySelector("#battery-arrows");
+    battery_arrow_element.setAttribute("class", `arrow-cell arrows-none`);
+    battery_arrow_element.innerHTML = ``;
+    const battery_soc = this.getConfigEntityState("battery_soc");
+    const battery_flow = this.getConfigEntityState("battery_flow");
+    // Image
+    const battery_image_element = this.card.querySelector("#battery-image");
+    if (battery_image_element) {
+      battery_image_element.innerHTML = `<img src="${this.getBase64Data(
+        this.getBatteryLevel(parseInt(battery_soc))
+      )}">`;
+    }
+    // Arrow
+    if (this.config.battery_flow && this.config.battery_flow.entity) {
+      const arrow_direction =
+        battery_flow < 0
+          ? "arrows-right"
+          : battery_flow > 0
+          ? "arrows-left"
+          : "arrows-none";
+      if (arrow_direction != "arrows-none") {
+        if (battery_arrow_element) {
+          battery_arrow_element.setAttribute(
+            "class",
+            `arrow-cell ${arrow_direction}`
+          );
+          battery_arrow_element.innerHTML = this.generateArrows();
+        }
+      }
+    }
+  }
+
+  updateSolar() {
+    // Arrow
+    const solar_arrow_element = this.card.querySelector("#solar-arrows");
+    if (solar_arrow_element) {
+      const pv_power = parseInt(this.getConfigEntityState("pv_power"));
+      const arrow_direction = pv_power > 0 ? "arrows-down" : "arrows-none";
+      if (arrow_direction != "arrows-none") {
+        solar_arrow_element.setAttribute(
+          "class",
+          `arrow-cell ${arrow_direction}`
+        );
+        solar_arrow_element.innerHTML = this.generateArrows();
+      } else {
+        solar_arrow_element.setAttribute("class", `arrow-cell arrows-none`);
+        solar_arrow_element.innerHTML = ``;
+      }
+    }
+  }
+
+  updateGrid() {
+    // Arrow
+    const grid_arrow_1_element = this.card.querySelector("#grid-arrows-1");
+    const grid_arrow_2_element = this.card.querySelector("#grid-arrows-2");
+    if (grid_arrow_1_element && grid_arrow_2_element) {
+      const grid_flow = parseInt(this.getConfigEntityState("grid_flow"));
+      const arrow_direction =
+        grid_flow < 0
+          ? "arrows-left"
+          : grid_flow > 0
+          ? "arrows-right"
+          : "arrows-none";
+      if (arrow_direction != "arrows-none") {
+        grid_arrow_1_element.setAttribute(
+          "class",
+          `arrow-cell ${arrow_direction}`
+        );
+        grid_arrow_2_element.setAttribute(
+          "class",
+          `arrow-cell ${arrow_direction}`
+        );
+        grid_arrow_1_element.innerHTML = this.generateArrows();
+        grid_arrow_2_element.innerHTML = this.generateArrows();
+      } else {
+        grid_arrow_1_element.setAttribute("class", `arrow-cell arrows-none`);
+        grid_arrow_2_element.setAttribute("class", `arrow-cell arrows-none`);
+        grid_arrow_2_element.innerHTML = ``;
+        grid_arrow_2_element.innerHTML = ``;
+      }
+    }
+  }
+
+  updateHome() {
+    // Arrow
+    const home_arrow_element = this.card.querySelector("#home-arrows");
+    if (home_arrow_element) {
+      const home_consumption = parseInt(
+        this.getConfigEntityState("home_consumption")
+      );
+      const arrow_direction =
+        home_consumption > 0 ? "arrows-down" : "arrows-none";
+      if (arrow_direction != "arrows-none") {
+        home_arrow_element.setAttribute(
+          "class",
+          `arrow-cell ${arrow_direction}`
+        );
+        home_arrow_element.innerHTML = this.generateArrows();
+      } else {
+        home_arrow_element.setAttribute("class", `arrow-cell arrows-none`);
+        home_arrow_element.innerHTML = ``;
+      }
+    }
+  }
+
+  updateAllocatedPower() {
+    // Arrow
+    const power_allocation_arrow_element = this.card.querySelector(
+      "#power-allocation-arrows"
+    );
+    if (power_allocation_arrow_element) {
+      power_allocation_arrow_element.setAttribute(
+        "class",
+        `arrow-cell arrows-right`
+      );
+      power_allocation_arrow_element.innerHTML = this.generateArrows();
+    }
   }
 
   generateStyles() {
     this.styles.innerHTML = `
+      /* CARD */
       ha-card {
         width: auto;
       }
+
+      /* GRID */
       .diagram-grid {
         display: grid;
         grid-template-columns: repeat(6, 1fr);
@@ -108,11 +239,15 @@ class LuxPowerDistributionCard extends HTMLElement {
         max-width: 100%;
         height: auto;
       }
+
+      /* CELLS */
       .cell {
         /* border: 1px solid #ccc; */
         width: 100%;
         height: auto;
       }
+      
+      /* IMAGE CELLS */
       .image-cell {
         display: flex;
         justify-content: center;
@@ -125,6 +260,29 @@ class LuxPowerDistributionCard extends HTMLElement {
         height: 100%; */
         object-fit: contain;
       }
+
+      /* ARROWS */
+      .arrow-cell {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+      }
+      .arrows-left {
+        transform: rotate(0deg);
+      }
+      .arrows-up {
+        transform: rotate(90deg);
+      }
+      .arrows-right {
+        transform: rotate(180deg);
+      }
+      .arrows-down {
+        transform: rotate(-90deg);
+      }
+      .arrows-none {
+        opacity: 0;
+      }
     `;
   }
 
@@ -134,8 +292,58 @@ class LuxPowerDistributionCard extends HTMLElement {
 
   generateCells() {
     var cells = ``;
+
+    // Row 1
+    cells += this.generateSolarCells();
+
+    // Row 2
+    cells += `<div id="battery-image" class="cell image-cell"><img src="${this.getBase64Data(
+      "battery-0"
+    )}"></div>`; // Battery image
+    cells += `<div id="battery-arrows" class="cell arrow-cell"></div>`; // Battery arrows
+    cells += `<div id="inverter-image" class="cell image-cell"><img src="${this.getBase64Data(
+      "inverter"
+    )}"></div>`; // Inverter image
+    cells += `<div id="grid-arrows-1" class="cell arrow-cell"></div>`; // Grid arrows 1
+    cells += `<div id="grid-arrows-2" class="cell arrow-cell"></div>`; // Grid arrows 2
+    cells += `<div id="grid-image" class="cell image-cell"><img src="${this.getBase64Data(
+      "grid"
+    )}"></div>`; // Grid image
+
+    // Row 3
+    cells += `<div id="battery-soc-info" class="cell"></div>`; // Battery SOC info
+    cells += `<div class="cell"></div>`;
+    cells += `<div id="home-arrows" class="cell arrow-cell"></div>`; // Home arrows
+    cells += `<div class="cell"></div>`;
+    cells += `<div class="cell"></div>`;
+    cells += `<div id="grid-info" class="cell"></div>`; // Grid info
+
+    // Row 4
+    cells += this.generateHomeCells();
+
+    const grid = this.card.getElementsByClassName("diagram-grid");
+    grid[0].innerHTML = cells;
+  }
+
+  generateSolarCells() {
+    var cells = ``;
     if (this.config.pv_power && this.config.pv_power.entity) {
-      cells += this.generateSolarCells();
+      // Row 0
+      cells += `<div class="cell"></div>`;
+      cells += `<div class="cell"></div>`;
+      cells += `<div id="solar-image" class="cell image-cell"><img src="${this.getBase64Data(
+        "solar"
+      )}"></div>`; // Solar image
+      cells += `<div id="solar-info" class="cell"></div>`; // Solar info
+      cells += `<div class="cell"></div>`;
+      cells += `<div class="cell"></div>`;
+      // Row 1
+      cells += `<div id="battery-charge-info" class="cell"></div>`; // Battery charge/discharge info
+      cells += `<div class="cell"></div>`;
+      cells += `<div id="solar-arrows" class="cell arrow-cell"></div>`; // Solar arrows
+      cells += `<div class="cell"></div>`;
+      cells += `<div class="cell"></div>`;
+      cells += `<div class="cell"></div>`;
     } else {
       // Row 1
       cells += `<div id="battery-charge-info" class="cell"></div>`; // Battery charge/discharge info
@@ -145,30 +353,11 @@ class LuxPowerDistributionCard extends HTMLElement {
       cells += `<div class="cell"></div>`;
       cells += `<div class="cell"></div>`;
     }
+    return cells;
+  }
 
-    // Row 2
-    cells += `<div id="battery-image" class="cell image-cell"><img src="${this.getBase64Data(
-      "battery-0"
-    )}"></div>`; // Battery image
-    cells += `<div id="battery-arrows" class="cell"></div>`; // Battery arrows
-    cells += `<div id="inverter-image" class="cell image-cell"><img src="${this.getBase64Data(
-      "inverter"
-    )}"></div>`; // Inverter image
-    cells += `<div id="grid-arrows-1" class="cell"></div>`; // Grid arrows 1
-    cells += `<div id="grid-arrows-2" class="cell"></div>`; // Grid arrows 2
-    cells += `<div id="grid-image" class="cell image-cell"><img src="${this.getBase64Data(
-      "grid"
-    )}"></div>`; // Grid image
-
-    // Row 2
-    cells += `<div id="battery-soc-info" class="cell"></div>`; // Battery SOC info
-    cells += `<div class="cell"></div>`;
-    cells += `<div class="cell"></div>`; // Home arrows
-    cells += `<div class="cell"></div>`;
-    cells += `<div class="cell"></div>`;
-    cells += `<div class="cell"></div>`; // Grid info
-
-    // Row 3
+  generateHomeCells() {
+    var cells = ``;
     if (
       this.config.energy_allocations &&
       this.config.energy_allocations.entities
@@ -179,7 +368,7 @@ class LuxPowerDistributionCard extends HTMLElement {
       cells += `<div id="home-image" class="cell image-cell"><img src="${this.getBase64Data(
         "home"
       )}"></div>`; // Home image
-      cells += `<div id="power-allocation-arrows" class="cell"></div>`; // Power allocation arrows
+      cells += `<div id="power-allocation-arrows" class="cell arrow-cell"></div>`; // Power allocation arrows
       cells += `<div id="power-allocation-image" class="cell image-cell"><img src="${this.getBase64Data(
         "home"
       )}"></div>`; // Power allocation image
@@ -194,31 +383,17 @@ class LuxPowerDistributionCard extends HTMLElement {
       cells += `<div class="cell"></div>`;
       cells += `<div class="cell"></div>`;
     }
-
-    const grid = this.card.getElementsByClassName("diagram-grid");
-    grid[0].innerHTML = cells;
+    return cells;
   }
 
-  generateSolarCells() {
-    var cells = ``;
-    // Row 0
-    cells += `<div class="cell"></div>`;
-    cells += `<div class="cell"></div>`;
-    cells += `<div id="solar-image" class="cell image-cell"><img src="${this.getBase64Data(
-      "solar"
-    )}"></div>`; // Solar image
-    cells += `<div id="solar-info" class="cell"></div>`; // Solar info
-    cells += `<div class="cell"></div>`;
-    cells += `<div class="cell"></div>`;
-    // Row 1
-    cells += `<div id="battery-charge-info" class="cell"></div>`; // Battery charge/discharge info
-    cells += `<div class="cell"></div>`;
-    cells += `<div id="solar-arrows" class="cell"></div>`; // Solar arrows
-    cells += `<div class="cell"></div>`;
-    cells += `<div class="cell"></div>`;
-    cells += `<div class="cell"></div>`;
-
-    return cells;
+  generateArrows() {
+    var inner_html = ``;
+    for (let i = 1; i < 5; i++) {
+      inner_html += `<div class="arrow-${i}"><img src="${this.getBase64Data(
+        "arrow"
+      )}"></div>`;
+    }
+    return inner_html;
   }
 
   getBase64Data(image_name) {
@@ -248,6 +423,29 @@ class LuxPowerDistributionCard extends HTMLElement {
       default:
         return ``;
     }
+  }
+
+  getBatteryLevel(battery_soc) {
+    if (battery_soc == 100) {
+      return "battery-5";
+    } else if (battery_soc >= 80) {
+      return "battery-4";
+    } else if (battery_soc >= 60) {
+      return "battery-3";
+    } else if (battery_soc >= 40) {
+      return "battery-2";
+    } else if (battery_soc >= 20) {
+      return "battery-1";
+    } else {
+      return "battery-0";
+    }
+  }
+
+  getConfigEntityState(config_entity) {
+    const entity = this._hass.states[this.config[config_entity].entity];
+
+    if (isNaN(entity.state)) return "-"; //check if entity state is NaN
+    else return entity.state;
   }
 }
 
