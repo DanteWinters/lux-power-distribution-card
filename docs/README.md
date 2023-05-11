@@ -1,66 +1,74 @@
 # LuxPower Distribution Card
 
-- [LuxPower Distribution Card](#luxpower-distribution-card)
-  - [Introduction](#introduction)
-  - [Installation](#installation)
-    - [Manual installation](#manual-installation)
-  - [Adding the card to the dashboard](#adding-the-card-to-the-dashboard)
-    - [Optional entities](#optional-entities)
-
-## Introduction
+A simple power distribution card of an inverter and battery system, for Home Assistant. The card is modeled after LuxpowerTek's app and website.
 
 ![Lux power distribution card](images/power-flow-card-1.png "Lux power distribution card")
-![Lux power distribution card](images/power-flow-card-2.png "Lux power distribution card")
-![Lux power distribution card](images/power-flow-card-3.png "Lux power distribution card")
-![Lux power distribution card](images/power-flow-card-4.png "Lux power distribution card")
-
-This is a custom Lovelace card for the Home Assistant. The card aims to recreate the power distribution card shown on the LuxpowerTek app and website, with a few small changes (and hopefully at some point, some improvements).
-
-The card is far from complete, so please bear with the development process.
 
 ## Installation
 
-Currently, the only way to install this card is to do so manually.
+### HACS
 
-### Manual installation
+This card is not yet published on HACS, so you will need to install it manually.
 
-1. Create a new folder in the */config/www/community* folder of your Home Assistant instance with the name *lux-power-distribution-card*.
-2. Copy the *lux-power-distribution-card.js* file from the repository into the newly created folder.
-3. Add the following reference to your dashboard references:
+### Manual install
 
-    */hacsfiles/lux-power-distribution-card/lux-power-distribution-card.js*
+1. Download `lux-power-distribution-card.js` from the [latest release](https://github.com/DanteWinters/lux-power-distribution-card/releases/latest) and copy it into your `config/www` directory.
 
-**NOTE:** The manual installation reference works if you already have HACS installed. If you don't have it installed, you need to use a different resource.
+2. Add the resource reference as decribed below.
+
+### CLI install
+
+1. Navigate into your `config/www` directory on Home Assistant.
+
+2. Download `lux-power-distribution-card.js` with the following command:
+
+  ```cli
+  $ wget https://github.com/DanteWinters/lux-power-distribution-card/releases/download/v0.2.0/lux-power-distribution-card.js
+  ```
+
+3. Add the resource reference as decribed below.
+
+### Add resource reference
+
+Visit the Resources page in your Home Assistant install and add `lux-power-distribution-card.js` as a JavaScript Module.
+ [![Open your Home Assistant instance and show your dashboard resources.](https://my.home-assistant.io/badges/lovelace_resources.svg)](https://my.home-assistant.io/redirect/lovelace_resources/)
 
 ## Adding the card to the dashboard
 
-Use the following config directly if you have the LuxpowerTek integration:
+### Configuration
+The following is a list of entities for the card:
 
+| Name | Required | Description |
+|---|:---:|---|
+| battery_soc| yes | Battery state of charge |
+| battery_flow| yes | Power flowing from and to the battery. Negative flow is discharge, and positive flow is charge. |
+| home_consumption| yes | Output power of the inverter to your home. |
+| grid_flow| yes | Power flowing to and from grid. Negative flow is is import from grid, and positive flow is export to grid. |
+| battery_voltage | no | Battery's voltage. |
+| pv_power | no | Solar power. |
+| backup_power | no | This is off-grid power. In the case of the LuxpowerTek inverter, this is used when grid is not available. |
+| grid_voltage | no | Grid's voltage. |
+| energy_allocations | no | This is not a single entity, but a list of entities. Explaination below. |
+
+If you have the Luxpower integration, you can use the following code directly (except for the energy_allocations):
  ```yaml
 type: custom:lux-power-distribution-card
 battery_soc:
-  entity: sensor.battery_soc
+  entity: sensor.lux_battery
 battery_flow:
-  entity: sensor.battery_flow
+  entity: sensor.lux_battery_flow_live
 home_consumption:
-  entity: sensor.home_consumption
+  entity: sensor.lux_home_consumption_live
 grid_flow:
-  entity: sensor.grid_flow
- ```
-
-### Optional entities
-
-The following entities can be added to the config but are not required:
-
-```yaml
+  entity: sensor.lux_grid_flow_live
 battery_voltage:
-  entity: sensor.battery_voltage
+  entity: sensor.lux_battery_voltage_live
 pv_power:
-  entity: sensor.pv_power
+  entity: sensor.lux_solar_output_live
 backup_power:
-  entity: sensor.backup_power
+  entity: sensor.lux_power_to_eps_live
 grid_voltage:
-  entity: sensor.grid_voltage
+  entity: sensor.lux_grid_voltage_live
 energy_allocations:
   entities:
     - sensor.power_plug_1
@@ -69,4 +77,17 @@ energy_allocations:
     - sensor.power_plug_4
 ```
 
-The *energy_allocations* entities can be any entity that measures power. It will sum the values together and display on the card.
+## LuxpowerTek integration
+
+The LuxpowerTek integration is hosted in a private repository by 
+[Guy Wells](https://github.com/guybw)
+
+## Energy Allocations Entities
+
+The *energy_allocations* entities can be any entity that measures power. It will sum the values together and display on the card. The idea is to use this to track how much of the home's power usage is know.
+
+## Additional illistrations
+
+![Lux power distribution card](images/power-flow-card-2.png "Lux power distribution card")
+![Lux power distribution card](images/power-flow-card-3.png "Lux power distribution card")
+![Lux power distribution card](images/power-flow-card-4.png "Lux power distribution card")
