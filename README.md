@@ -1,8 +1,13 @@
 # LuxPower Distribution Card
 
-A simple power distribution card of an inverter and battery system, for Home Assistant. The card is modeled after LuxpowerTek's app and website.
+<!-- [![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=flat-square)](https://github.com/hacs/integration) -->
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/DanteWinters/lux-power-distribution-card?style=flat-square)
+![Github stars](https://img.shields.io/github/stars/DanteWinters/lux-power-distribution-card?style=flat-square)
+![Github issues](https://img.shields.io/github/issues/DanteWinters/lux-power-distribution-card?style=flat-square)
 
-![Lux power distribution card](images/power-flow-card-1.png "Lux power distribution card")
+A simple power distribution card of an inverter and battery system, for [Home Assistant](https://home-assistant.io/). The card is modeled after LuxpowerTek's app and website.
+
+<img width="454" alt="Lux power distribution card" src="https://raw.githubusercontent.com/DanteWinters/lux-power-distribution-card/main/docs/images/power-flow-card-1.png">
 
 ## Installation
 
@@ -88,6 +93,6 @@ The *energy_allocations* entities can be any entity that measures power. It will
 
 ## Additional illistrations
 
-![Lux power distribution card](images/power-flow-card-2.png "Lux power distribution card")
-![Lux power distribution card](images/power-flow-card-3.png "Lux power distribution card")
-![Lux power distribution card](images/power-flow-card-4.png "Lux power distribution card")
+![Lux power distribution card](./docs/images/power-flow-card-2.png "Lux power distribution card")
+![Lux power distribution card](./docs/images/power-flow-card-3.png "Lux power distribution card")
+![Lux power distribution card](./docs/images/power-flow-card-4.png "Lux power distribution card")
