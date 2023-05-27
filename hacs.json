@@ -1,6 +1,5 @@
 {
-    "name": "lux-power-distribution-card",
-    "content_in_root": true,
-    "render_readme": true,
-    "filename": "lux-power-distribution-card.js"
-  }
+  "name": "lux-power-distribution-card",
+  "render_readme": true,
+  "filename": "lux-power-distribution-card.js"
+}
