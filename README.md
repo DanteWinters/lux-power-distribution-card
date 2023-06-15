@@ -13,7 +13,10 @@ A simple power distribution card of an inverter and battery system, for [Home As
 
 ### HACS
 
-This card is not yet published on HACS, so you will need to install it manually.
+There is a PR to add this card to the HACS defaults, but for now this card can be added by adding the url as a custom repository source in HACS:
+```
+DanteWinters/lux-power-distribution-card
+```
 
 ### Manual install
 
@@ -90,9 +93,3 @@ The LuxpowerTek integration is hosted in a private repository by
 ## Energy Allocations Entities
 
 The *energy_allocations* entities can be any entity that measures power. It will sum the values together and display on the card. The idea is to use this to track how much of the home's power usage is know.
-
-## Additional illistrations
-
-![Lux power distribution card](./docs/images/power-flow-card-2.png "Lux power distribution card")
-![Lux power distribution card](./docs/images/power-flow-card-3.png "Lux power distribution card")
-![Lux power distribution card](./docs/images/power-flow-card-4.png "Lux power distribution card")
