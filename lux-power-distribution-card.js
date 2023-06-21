@@ -23,6 +23,20 @@ class LuxPowerDistributionCard extends HTMLElement {
       throw new Error("You need to define an entity for the grid flow.");
     }
     this.config = JSON.parse(JSON.stringify(config));
+
+    // Optional parameters for more interactive card
+    if (!this.config.grid_indicator_dot) {
+      this.config.grid_indicator_dot = false;
+    }
+    if (!this.config.grid_indicator_hue) {
+      this.config.grid_indicator_hue = false;
+    }
+    if (!this.config.update_time_timestamp_attribute) {
+      this.config.update_time_timestamp_attribute = false;
+    }
+    if (!this.config.use_lux_status_codes) {
+      this.config.use_lux_status_codes = false;
+    }
   }
 
   createCard() {
@@ -45,6 +59,8 @@ class LuxPowerDistributionCard extends HTMLElement {
 
     content.innerHTML = `
       <ha-card>
+        <div id="grid-status-info" class="grid-status">
+        </div>
         <div class="diagram-grid">
         </div>
         <div id="datetime-info" class="update-time">
@@ -59,6 +75,7 @@ class LuxPowerDistributionCard extends HTMLElement {
     this.generateStyles();
     this.generateGrid();
     this.generateDateTime();
+    this.generateStatus();
   }
 
   connectedCallback() {
@@ -112,6 +129,7 @@ class LuxPowerDistributionCard extends HTMLElement {
       this.updateGrid();
       this.updateHome();
       this.updateAllocatedPower();
+      this.generateStatus();
     }
   }
 
@@ -142,8 +160,16 @@ class LuxPowerDistributionCard extends HTMLElement {
       // Charge info
       const battery_charge_info_element = this.card.querySelector("#battery-charge-info");
       battery_charge_info_element.innerHTML = `
-        <h3>${this.formatPowerStates("battery_flow")}</h3>
-        <p>${battery_flow > 0 ? "Battery Charging" : battery_flow < 0 ? "Battery Discharging" : "Idle"}</p>
+        <div class="text-grid">
+          <div class="cell">
+            <p class="header-text">${this.formatPowerStates("battery_flow")}</p>
+          </div>
+          <div class="cell">
+            <p class="sub-text">${
+              battery_flow > 0 ? "Battery Charging" : battery_flow < 0 ? "Battery Discharging" : "Idle"
+            }</p>
+          </div>
+        </div>
       `;
     }
     var battery_voltage = "";
@@ -153,8 +179,14 @@ class LuxPowerDistributionCard extends HTMLElement {
     const battery_soc_info_element = this.card.querySelector("#battery-soc-info");
     if (battery_soc_info_element) {
       battery_soc_info_element.innerHTML = `
-        <h3>${battery_soc}%</h3>
-        <h3>${battery_voltage}</h3>
+        <div class="text-grid">
+          <div class="cell">
+            <p class="header-text">${battery_soc}%</p>
+          </div>
+          <div class="cell">
+            <p class="header-text">${battery_voltage}</p>
+          </div>
+        </div>
     `;
     }
   }
@@ -177,8 +209,14 @@ class LuxPowerDistributionCard extends HTMLElement {
       }
       // Info
       solar_info_element.innerHTML = `
-        <h3>${this.formatPowerStates("pv_power")}</h3>
-        <p>${pv_power > 0 ? "Solar Import" : ""}</p>
+        <div class="text-grid">
+          <div class="cell">
+            <p class="header-text">${this.formatPowerStates("pv_power")}</p>
+          </div>
+          <div class="cell">
+            <p class="sub-text">${pv_power > 0 ? "Solar Import" : ""}</p>
+          </div>
+        </div>
       `;
     }
   }
@@ -208,20 +246,33 @@ class LuxPowerDistributionCard extends HTMLElement {
     if (this.config.grid_voltage && this.config.grid_voltage.entity) {
       var grid_voltage = parseInt(this.getConfigEntityState("grid_voltage"));
       const grid_image_element = this.card.querySelector("#grid-image");
-      grid_image_element.setAttribute("class", grid_voltage == 0 ? `cell image-cell blend-overlay` : `cell image-cell`);
-      grid_emoji = grid_voltage == 0 ? ` 🔴` : ``;
+      if (this.config.grid_indicator_hue) {
+        grid_image_element.setAttribute(
+          "class",
+          grid_voltage == 0 ? `cell image-cell blend-overlay` : `cell image-cell`
+        );
+      }
+      if (this.config.grid_indicator_dot) {
+        grid_emoji = grid_voltage == 0 ? ` 🔴` : ``;
+      }
     }
 
     // Info
     const grid_info_element = this.card.querySelector("#grid-info");
     if (grid_info_element) {
       grid_info_element.innerHTML = `
-        <h3>${this.formatPowerStates("grid_flow")}</h3>
-        <h3>${
-          this.config.grid_voltage && this.config.grid_voltage.entity
-            ? `${this.getConfigEntityState("grid_voltage")} Vac${grid_emoji}`
-            : ""
-        }</h3>
+        <div class="text-grid">
+          <div class="cell">
+            <p class="header-text">${this.formatPowerStates("grid_flow")}</p>
+          </div>
+          <div class="cell">
+            <p class="header-text">${
+              this.config.grid_voltage && this.config.grid_voltage.entity
+                ? `${this.getConfigEntityState("grid_voltage")} Vac${grid_emoji}`
+                : ""
+            }</p>
+          </div>
+        </div>
       `;
     }
   }
@@ -250,10 +301,16 @@ class LuxPowerDistributionCard extends HTMLElement {
     const home_info_element = this.card.querySelector("#home-info");
     if (home_info_element) {
       home_info_element.innerHTML = `
-        <h3>${this.formatPowerStates("home_consumption")}</h3>
-        <h3>${
-          this.config.backup_power && this.config.backup_power.entity ? this.formatPowerStates("backup_power") : ""
-        }</h3>
+        <div class="text-grid">
+          <div class="cell">
+            <p class="header-text">${this.formatPowerStates("home_consumption")}</p>
+          </div>
+          <div class="cell">
+            <p class="header-text">${
+              this.config.backup_power && this.config.backup_power.entity ? this.formatPowerStates("backup_power") : ""
+            }</p>
+          </div>
+        </div>
       `;
     }
   }
@@ -269,8 +326,14 @@ class LuxPowerDistributionCard extends HTMLElement {
 
       const power_allocation_info_element = this.card.querySelector("#power-allocation-info");
       power_allocation_info_element.innerHTML = `
-        <p>Allocated Power</p>
-        <h3>${parseInt(this.getAllocatedPower())} W</h3>
+        <div class="text-grid">
+          <div class="cell">
+            <p class="sub-text">Allocated Power</p>
+          </div>
+          <div class="cell">
+            <p class="header-text">${parseInt(this.getAllocatedPower())}</p>
+          </div>
+        </div>
       `;
     }
   }
@@ -280,6 +343,7 @@ class LuxPowerDistributionCard extends HTMLElement {
       /* CARD */
       ha-card {
         width: auto;
+        padding: 1px;
       }
 
       /* GRID */
@@ -292,12 +356,61 @@ class LuxPowerDistributionCard extends HTMLElement {
         max-width: 100%;
         height: auto;
       }
-
+      .text-grid {
+        display: grid;
+        grid-template-columns: repeat(1, 1fr);
+        grid-template-rows: repeat(2, 1fr);
+        width: 100%;
+        height: 100%;
+      }
+      
       /* CELLS */
       .cell {
         /* border: 1px solid #ccc; */
         width: 100%;
         height: auto;
+      }
+      
+      /* TEXT */
+      .text-cell-left {
+        max-height: 100%;
+        display: flex;
+        justify-content: left;
+        text-align: left;
+        overflow: auto;
+        flex-wrap: wrap;
+        word-wrap: break-word; /* Allow the text to wrap within the cell */
+        overflow: hidden; /* Hide any overflowed text */
+        flex-shrink: 1; /* Allow the text to shrink within the cell */
+      }
+      .text-cell-right {
+        max-height: 100%;
+        display: flex;
+        justify-content: right;
+        text-align: right;
+        overflow: auto;
+        flex-wrap: wrap;
+        word-wrap: break-word; /* Allow the text to wrap within the cell */
+        overflow: hidden; /* Hide any overflowed text */
+        flex-shrink: 1; /* Allow the text to shrink within the cell */
+      }
+      .header-text { 
+        font-size: 1.17em;
+        font-weight: bold;
+        line-height: 1;
+        margin: 0;
+        padding-left: 3px;
+        padding-right: 3px;
+        padding-top: 3px;
+        padding-bottom: 3px;
+      }
+      .sub-text { 
+        line-height: 1;
+        margin: 0;
+        padding-left: 3px;
+        padding-right: 3px;
+        padding-top: 3px;
+        padding-bottom: 3px;
       }
       
       /* IMAGE CELLS */
@@ -312,11 +425,11 @@ class LuxPowerDistributionCard extends HTMLElement {
         object-fit: contain;
         position: relative;
       }
-
+      
       .blend-overlay {
         mix-blend-mode: overlay;
       }
-
+      
       /* ARROWS */
       .arrow-cell {
         display: flex;
@@ -373,6 +486,13 @@ class LuxPowerDistributionCard extends HTMLElement {
       /* TIME AND DATE */
       .update-time {
         text-align: left;
+        margin: 0;
+        line-height: 1;
+      }
+      .grid-status {
+        text-align: right;
+        margin: 0;
+        line-height: 1;
       }
     `;
   }
@@ -396,12 +516,12 @@ class LuxPowerDistributionCard extends HTMLElement {
     cells += `<div id="grid-image" class="cell image-cell"><img src="${this.getBase64Data("grid")}"></div>`; // Grid image
 
     // Row 3
-    cells += `<div id="battery-soc-info" class="cell"></div>`; // Battery SOC info
+    cells += `<div id="battery-soc-info" class="cell text-cell-left"></div>`; // Battery SOC info
     cells += `<div class="cell"></div>`;
     cells += `<div id="home-arrows" class="cell arrow-cell"></div>`; // Home arrows
     cells += `<div class="cell"></div>`;
     cells += `<div class="cell"></div>`;
-    cells += `<div id="grid-info" class="cell"></div>`; // Grid info
+    cells += `<div id="grid-info" class="cell text-cell-right"></div>`; // Grid info
 
     // Row 4
     cells += this.generateHomeCells();
@@ -417,11 +537,11 @@ class LuxPowerDistributionCard extends HTMLElement {
       cells += `<div class="cell"></div>`;
       cells += `<div class="cell"></div>`;
       cells += `<div id="solar-image" class="cell image-cell"><img src="${this.getBase64Data("solar")}"></div>`; // Solar image
-      cells += `<div id="solar-info" class="cell"></div>`; // Solar info
+      cells += `<div id="solar-info" class="cell text-cell-left"></div>`; // Solar info
       cells += `<div class="cell"></div>`;
       cells += `<div class="cell"></div>`;
       // Row 1
-      cells += `<div id="battery-charge-info" class="cell"></div>`; // Battery charge/discharge info
+      cells += `<div id="battery-charge-info" class="cell text-cell-left"></div>`; // Battery charge/discharge info
       cells += `<div class="cell"></div>`;
       cells += `<div id="solar-arrows" class="cell arrow-cell"></div>`; // Solar arrows
       cells += `<div class="cell"></div>`;
@@ -429,7 +549,7 @@ class LuxPowerDistributionCard extends HTMLElement {
       cells += `<div class="cell"></div>`;
     } else {
       // Row 1
-      cells += `<div id="battery-charge-info" class="cell"></div>`; // Battery charge/discharge info
+      cells += `<div id="battery-charge-info" class="cell text-cell-left"></div>`; // Battery charge/discharge info
       cells += `<div class="cell"></div>`;
       cells += `<div class="cell"></div>`;
       cells += `<div class="cell"></div>`;
@@ -441,19 +561,28 @@ class LuxPowerDistributionCard extends HTMLElement {
 
   generateHomeCells() {
     var cells = ``;
+    var refresh_button = ``;
+    if (this.config.lux_dongle) {
+      refresh_button = `
+        <button id="serviceButton" class="icon-button" @click="${this.callRefreshService}">
+          <ha-icon icon="mdi:cloud-refresh"></ha-icon>
+        </button>
+      `;
+    }
+
     if (this.config.energy_allocations && this.config.energy_allocations.entities) {
       // Power Allocations
-      cells += `<div class="cell"></div>`;
-      cells += `<div id="home-info" class="cell"></div>`; // Home info
+      cells += `<div id="refresh-button-cell" class="cell">${refresh_button}</div>`;
+      cells += `<div id="home-info" class="cell text-cell-right"></div>`; // Home info
       cells += `<div id="home-image" class="cell image-cell"><img src="${this.getBase64Data("home-normal")}"></div>`; // Home image
       cells += `<div id="power-allocation-arrows" class="cell arrow-cell"></div>`; // Power allocation arrows
       cells += `<div id="power-allocation-image" class="cell image-cell"><img src="${this.getBase64Data(
         "home-normal"
       )}"></div>`; // Power allocation image
-      cells += `<div id="power-allocation-info" class="cell"></div>`; // Power allocation info
+      cells += `<div id="power-allocation-info" class="cell text-cell-left"></div>`; // Power allocation info
     } else {
-      cells += `<div class="cell"></div>`;
-      cells += `<div id="home-info" class="cell"></div>`; // Home info
+      cells += `<div id="refresh-button-cell" class="cell">${refresh_button}</div>`;
+      cells += `<div id="home-info" class="cell text-cell-right"></div>`; // Home info
       cells += `<div id="home-image" class="cell image-cell"><img src="${this.getBase64Data("home-normal")}"></div>`; // Home image
       cells += `<div class="cell"></div>`;
       cells += `<div class="cell"></div>`;
@@ -472,31 +601,53 @@ class LuxPowerDistributionCard extends HTMLElement {
 
   generateDateTime() {
     if (this.config.update_time && this.config.update_time.entity) {
-      var last_time_ts = this.getConfigEntityAttribute("update_time", "timestamp");
       var last_time = this.getConfigEntityState("update_time");
-      var time_now = Date.now() / 1000;
-      var diff = time_now - last_time_ts;
-
-      var time_since = ``;
-      switch (true) {
-        case diff <= 2:
-          time_since = `now`;
-          break;
-        case diff < 60:
-          time_since = `${Math.round(diff)} seconds ago`;
-          break;
-        case diff < 120:
-          time_since = `1 minute ago`;
-          break;
-        case diff >= 120:
-          time_since = `${Math.round(diff / 60)} minutes ago`;
-          break;
-      }
 
       const date_time_info = this.card.querySelector("#datetime-info");
-      date_time_info.innerHTML = `
-        <p>Last update at: ${last_time}</p>
-        <p>(${time_since})</p>
+      if (this.config.update_time_timestamp_attribute) {
+        var last_time_ts = this.getConfigEntityAttribute("update_time", "timestamp");
+        var time_now = Date.now() / 1000;
+        var diff = time_now - last_time_ts;
+
+        var time_since = ``;
+        switch (true) {
+          case diff <= 2:
+            time_since = `now`;
+            break;
+          case diff < 60:
+            time_since = `${Math.round(diff)} seconds ago`;
+            break;
+          case diff < 120:
+            time_since = `1 minute ago`;
+            break;
+          case diff >= 120:
+            time_since = `${Math.round(diff / 60)} minutes ago`;
+            break;
+        }
+
+        date_time_info.innerHTML = `
+          <p class="update-time">Last update at: ${last_time}</p>
+          <p class="update-time">(${time_since})</p>
+        `;
+      } else {
+        date_time_info.innerHTML = `
+          <p class="update-time">Last update at: ${last_time}</p>
+        `;
+      }
+    }
+  }
+
+  generateStatus() {
+    if (this.config.use_lux_status_codes) {
+      var grid_status = `Status: Normal 🟢`;
+      const status_info = this.card.querySelector("#grid-status-info");
+      if (this.config.lux_fail_status_codes && this.config.lux_status_code && this.config.lux_status_code.entity) {
+        if (this.config.lux_fail_status_codes.includes(parseInt(this.getConfigEntityState("lux_status_code")))) {
+          grid_status = `Status: Warning 🔴`;
+        }
+      }
+      status_info.innerHTML = `
+        <p class="grid-status">${grid_status}</p>
       `;
     }
   }
@@ -512,7 +663,7 @@ class LuxPowerDistributionCard extends HTMLElement {
       case "battery-2":
         return `data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFYAAABWCAYAAABVVmH3AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAOISURBVHhe7Z3LaxNRFMbPNOnDJAg+d6KmCNYXuBMRESoiUm0VLKIo+BcIWupCaksXQosVxLUbQWmy0UhxIe4U0Y0g2gdIi7r0CSUJjU0Y58zcUkSEUuc7dyY9v82cews5J1/nvr5FrkMW6cr1fiaHNhG5XiusUoLPcsn5VOge2hL0yWNN2M58b9VLnjBNCJ7EtUL3cNI0RWkwT1E681c/okVlOIc/KixgRVhvoG42IR5/qpHHirDBPCiFZK5FLAkrObXbWUYsCVv/qLAg4OPk7P2BbClZHncctyXosTM0F+Za13Xm0tXUzgfnBmb8DhDQN9bb6vSVG8vTjkOeqCyoLVGZID/XwjVxbUE/Btg35TeVv4BpRpJqqdY2dnFkyjRDBfbGeqK+N2FkSaYTb0wYOsCpwF1lggiDqxEorM35dKngaoR9cle+968jz/Z1Fbqw+xhl1+yn5mTG9GKpVIs08/Ml3Xv3hKa+N5veRR51D0M0ENvHtq2fp/6Dg9S24YiYqAzn4px+bq8GKcSEPb/rKLUkV5uWPJyba5BCTFge/rZpXXvARHjEhJUc/v+iKZEyER4xYXkRsc2vWtlEeMSE5ZXZNtM/XpgIj5iwuYkCzVVnTUsezs01SCEm7NsvGRp8PkCTX59SpVYyvXg4F+fk3FyDFKIHhCgS+wPCSkOFBaHCglBhQai7pe7W8lB3C4y6W0DU3QKh7hYIdbdAqLsFQN2tkFF3yxLqbsUMFRaECgtChQWh7pa6W8tD3S0w6m4BUXcLhLpbINTdAqHuFgB1t0JG3S1LqLsVM1RYECosCBUWhKiw7G7dONTuxw9PD4k8R0/2+Tk5tyRiuwJ2lq7su0TPZm7S6ITc0TLTnKSO1lk6nO2hkVe3afJbo/lLQOx3BewsSYvKFCtVPyfnrlt3a2zanm34+ENG1N3SA0LcpwJeRHi+s0WqsYFyp/pNC4+YsOxu8SJiixPbivXrbrVvvUxndpQp3QT/vcg/4Jycu27drVuv79Cejcfpbsc1v2+pe9H/fXJOzq3uliDqbsUMFRaECgtChQUhKqy6WyGg7pYQ6m6BUHcrJPSAIIS6WyDU3QKh7hYIdbdCQhevFQ3ufw8UNhYvLAyYsHxDhgkjC7JGmLC1cm2vCSMJjydkjTBh/RsxXLpumpHD8WpD3drBwHYFCwRXo5TGvVTmEh/buHOp+TT4Eh+i3w5SEpXIQSEuAAAAAElFTkSuQmCC`;
       case "battery-3":
-        return `data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFYAAABWCAYAAABVVmH3AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAOISURBVHhe7Z3LaxNRFMbPNOnDJAg+d6KmCNYXuBMRESoiUm0VLKIo+BcIWupCaksXQosVxLUbQWmy0UhxIe4U0Y0g2gdIi7r0CSUJjU0Y58zcUkSEUuc7dyY9v82cews5J1/nvr5FrkMW6cr1fiaHNhG5XiusUoLPcsn5VOge2hL0yWNN2M58b9VLnjBNCJ7EtUL3cNI0RWkwT1E681c/okVlOIc/KixgRVhvoG42IR5/qpHHirDBPCiFZK5FLAkrObXbWUYsCVv/qLAg4OPk7P2BbClZHncctyXosTM0F+Za13Xm0tXUzgfnBmb8DhDQN9bb6vSVG8vTjkOeqCyoLVGZID/XwjVxbUE/Btg35TeVv4BpRpJqqdY2dnFkyjRDBfbGeqK+N2FkSaYTb0wYOsCpwF1lggiDqxEorM35dKngaoR9cle+968jz/Z1Fbqw+xhl1+yn5mTG9GKpVIs08/Ml3Xv3hKa+N5veRR51D0M0ENvHtq2fp/6Dg9S24YiYqAzn4px+bq8GKcSEPb/rKLUkV5uWPJyba5BCTFge/rZpXXvARHjEhJUc/v+iKZEyER4xYXkRsc2vWtlEeMSE5ZXZNtM/XpgIj5iwuYkCzVVnTUsezs01SCEm7NsvGRp8PkCTX59SpVYyvXg4F+fk3FyDFKIHhCgS+wPCSkOFBaHCglBhQai7pe7W8lB3C4y6W0DU3QKh7hYIdbdAqLsFQN2tkFF3yxLqbsUMFRaECgtChQWh7pa6W8tD3S0w6m4BUXcLhLpbINTdAqHuFgB1t0JG3S1LqLsVM1RYECosCBUWhKiw7G7dONTuxw9PD4k8R0/2+Tk5tyRiuwJ2lq7su0TPZm7S6ITc0TLTnKSO1lk6nO2hkVe3afJbo/lLQOx3BewsSYvKFCtVPyfnrlt3a2zanm34+ENG1N3SA0LcpwJeRHi+s0WqsYFyp/pNC4+YsOxu8SJiixPbivXrbrVvvUxndpQp3QT/vcg/4Jycu27drVuv79Cejcfpbsc1v2+pe9H/fXJOzq3uliDqbsUMFRaECgtChQUhKqy6WyGg7pYQ6m6BUHcrJPSAIIS6WyDU3QKh7hYIdbdCQhevFQ3ufw8UNhYvLAyYsHxDhgkjC7JGmLC1cm2vCSMJjydkjTBh/RsxXLpumpHD8WpD3drBwHYFCwRXo5TGvVTmEh/buHOp+TT4Eh+i3w5SEpXIQSEuAAAAAElFTkSuQmCC`;
+        return `data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFYAAABWCAYAAABVVmH3AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAN/SURBVHhe7Z3NS1RRGMbfq44jOvRd+5Qgw6JNIBERGBFhaUGTm/wXgj5sIeHgIrBPokVt2rSamU0Z4SLaFWHQwjA0CP0D+lbGwTvjeLvvvcdcRCB1n/fcGd/fZs45wjyvj/d8PSDXIYv05gbmyKENRJ7fi6qU8Ls8cuZG0yObwjF5rBnbk7+y7JAD1ffI80bTN+tMVxQroj35qz/RpjKsEcwKC1gx1p+oG00TT7DUyGPF2HAdlEJSaxVLxkou7Xa2EUvG1j5qLAj4PDmXzXS4TnGCHK8+HLEzNX+vtZ5TSXrN+3N9mQ/hAAboE9uTG3jg1hUnfS99U9lQW6YyRt+vhWvi2sJxDLDfNHhS2dQYU1osHxjrv/vOdCMF9sT6pk6YZmxpbEqMm2bkAJeClTU1zuBqBBprcz1dK7gaYd/cmx/448qze6tL/XtPUOvmg5RsSJlRLO5SgWZ/vKHHk2P08VvSjK7yNH0D4oHYObZ9W5mGDg9T+/ZjYqYyrMWagbZfgxRixp7vOE5NDVbykADW5hqkEDOWp79t2rYcMi08YsZKTv+/0VjfbFp4xIzlTcQ2pUrRtPCIGcs7s21mvr82LTxixuamRmlxad705GFtrkEKMWPff07R8KsMTX95QW5lwYziYS3WZG2uQQrRC0IcqfoLwnpDjQWhxoJQY0FouqXp1r+h6RYYTbeAaLoFQtMtEJpugdB0C4CmWxGj6ZYlNN2qMtRYEGosCDUWhKixnG5dP9IVtJ+cHRH5zJ6+FmiytiRipwJOli51XqCXs7coOyV3tUwlG6i7bZ6Otl6m2+P3aPprwvwkpOpPBZwsSZvKFNylQJO1azbdej5jLzZ89iklmm7pBaHalwLeRHi9s0Vzoo5yZ4ZMD4+YsZxu8SZii1O7CrWbbnXtvEh9e4rU0ij7fx+sydo1m27deXuf9u04SY+6B4OxtZ5F//eTNVlb0y1BNN2qMtRYEGosCDUWhKixmm5FgKZbQmi6BULTrYjQC4IQmm6B0HQLhKZbIDTdigjdvBQIaiwINRaEGgtC1FhNtyJA0y0hNN0CoelWROgFQQhNt0BougVC0y0Qmm5FhG5e6xrc3x5obFU8sDBwxnpOxbTiC7BGmLElt9xpmrGE5xOyRpix/EYMz6OHphs//NpQb+1gYKeCFcJXoyxM+FIxeeGEV0kut4Bf4kP0C2AQQe5P6M+yAAAAAElFTkSuQmCC`;
       case "battery-4":
         return `data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFYAAABWCAYAAABVVmH3AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAANuSURBVHhe7Z3LaxNRFMbPtEkT0iD43NsiWFGXUkSkUhGRaqvQ4Mb+C4JKuxCJ7UKo+EBcu3HVREUroiCCiCKpOxFaQdo/wCeUNGZM6jhn5qqLIgSc79xMcn6b3LmBfGe+zH19m3HIIiOFiSo5XorI86+iKiX8LY8cdzY3nQ775LFm7HBx3EOLs8WzuctW7rHDfIoyXJyoStwtawSjwgJWjPUHqj/8hQimGnmsGBsOUikktf5iyVjJac/KFGvL2NZHjQUBHyejxfyemlcp+UpGy87Q/DPXeuQlnUz/ndzkm7ADA/SJ9bc6d2v0fY4cx3eTDbVlKmP0/Vq4Jq4t7McAu9PgSWVTmxi3Wht4Mnb9hbmMFNgTWyN/+Dc5qXTiuWlGDnIqsDnuGwVWI9DYtvYV98sjxfE1R57tG10a23WEetbvpVQia3qxuPUyLX17TbffPab3X9aebh+AQhqxfWzfphrl909R3+ZDYqYyrMWagbZfgxRixp7aeZjSiXXmSh7W5hqkEDOWh79tejfsMy08YsZKDv9/0dWZMS08YsbyImKbH6sV08IjZiyvzLZZ/PrKtPCIGVuYn6VqfdlcycPaXIMUYsa+/ZilqZcXaeHTU3JXV0wvHtZiTdbmGqQQPSA0I7E/ILQbaiwINRaEGgtC1FhOty4NDAbt+6PTIp8zxy8EmqwtidiugJOls/2n6dnSFZqZlztaZlMJGupdpoM95+hq6QYtfE6ab0JivyvgZEnaVKbs1gNN1m7ZdOvRor3Y8OGHrGi6pQeEuE8FvIjwfGeLTLKDCify5gqPmLGcbvEiYotj28qtm24Nbj1DJ3dUqLur0/TKwJqs3bLp1rW5m7R7y1G6NXQ+6Gt0L/q/n6zJ2ppuCaLpVsxQY0GosSDUWBCixmq6FQGabgmh6RYITbciQg8IQmi6BULTLRCaboHQdCsidPFSIKixINRYEGosCFFjNd2KAE23hNB0C4SmWxGhBwQhNN0CoekWCE23QGi6FRG6eCkQ1FgQaiwINRaEqLGabkWApltCaLoFQtOtiNADghCaboHQdAuEplsgNN2KCF282hrcfw80NhYPLAycsV4MnAXWCDPWdesHTLMpYUeRNcKMDd6I4Tn3zGXT4fi1od7awcB2Bb8JX42yUvL/Q7hWY/z0ktQNfokP0S9AcG1Llwp+vgAAAABJRU5ErkJggg==`;
       case "battery-5":
@@ -597,6 +748,13 @@ class LuxPowerDistributionCard extends HTMLElement {
       return `${Math.abs(parseInt(state))} ${unit}`;
     } else if (unit == "kW") {
       return `${Math.abs(parseInt(state)) * 1000} W`;
+    }
+  }
+
+  callRefreshService() {
+    if (this.config.lux_dongle) {
+      var lux_dongle = this.config.lux_dongle;
+      this._hass.callService("luxpower", "luxpower.luxpower_refresh_registers", { dongle: lux_dongle });
     }
   }
 }
