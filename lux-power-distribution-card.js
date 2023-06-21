@@ -732,6 +732,9 @@ class LuxPowerDistributionCard extends HTMLElement {
       let entity = this._hass.states[this.config["energy_allocations"].entities[i]];
       let entity_value = entity.state;
       let entity_unit = entity.attributes.unit_of_measurement;
+      if (entity_value === "unavailable" || entity_value === "unknown") {
+        entity_unit = "nan";
+      }
       if (entity_unit == "W") {
         allocatedEnergy += parseFloat(entity_value);
       } else if (entity_unit == "kW") {
