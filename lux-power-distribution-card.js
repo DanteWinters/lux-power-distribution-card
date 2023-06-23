@@ -4,6 +4,8 @@ class LuxPowerDistributionCard extends HTMLElement {
 
     if (!this.card) {
       this.createCard();
+      this.bindRefresh(this.card, this._hass, this.config);
+      this.bindHistoryGraph(this.card, this._hass, this.config);
     }
 
     this.updateCard();
@@ -36,6 +38,9 @@ class LuxPowerDistributionCard extends HTMLElement {
     }
     if (!this.config.use_lux_status_codes) {
       this.config.use_lux_status_codes = false;
+    }
+    if (!this.config.refresh_button_location) {
+      this.config.refresh_button_location = "none";
     }
   }
 
@@ -532,6 +537,14 @@ class LuxPowerDistributionCard extends HTMLElement {
 
   generateSolarCells() {
     var cells = ``;
+    var refresh_button = ``;
+    if (this.config.lux_dongle && ["right", "both"].includes(String(this.config.refresh_button_location))) {
+      refresh_button = `
+        <button id="refresh-button-right" class="icon-button">
+          <ha-icon icon="mdi:cloud-refresh"></ha-icon>
+        </button>
+      `;
+    }
     if (this.config.pv_power && this.config.pv_power.entity) {
       // Row 0
       cells += `<div class="cell"></div>`;
@@ -546,7 +559,7 @@ class LuxPowerDistributionCard extends HTMLElement {
       cells += `<div id="solar-arrows" class="cell arrow-cell"></div>`; // Solar arrows
       cells += `<div class="cell"></div>`;
       cells += `<div class="cell"></div>`;
-      cells += `<div class="cell"></div>`;
+      cells += `<div class="cell">${refresh_button}</div>`;
     } else {
       // Row 1
       cells += `<div id="battery-charge-info" class="cell text-cell-left"></div>`; // Battery charge/discharge info
@@ -554,7 +567,7 @@ class LuxPowerDistributionCard extends HTMLElement {
       cells += `<div class="cell"></div>`;
       cells += `<div class="cell"></div>`;
       cells += `<div class="cell"></div>`;
-      cells += `<div class="cell"></div>`;
+      cells += `<div class="cell">${refresh_button}</div>`;
     }
     return cells;
   }
@@ -562,9 +575,9 @@ class LuxPowerDistributionCard extends HTMLElement {
   generateHomeCells() {
     var cells = ``;
     var refresh_button = ``;
-    if (this.config.lux_dongle) {
+    if (this.config.lux_dongle && ["left", "both"].includes(String(this.config.refresh_button_location))) {
       refresh_button = `
-        <button id="serviceButton" class="icon-button" @click="${this.callRefreshService}">
+        <button id="refresh-button-left" class="icon-button">
           <ha-icon icon="mdi:cloud-refresh"></ha-icon>
         </button>
       `;
@@ -572,7 +585,7 @@ class LuxPowerDistributionCard extends HTMLElement {
 
     if (this.config.energy_allocations && this.config.energy_allocations.entities) {
       // Power Allocations
-      cells += `<div id="refresh-button-cell" class="cell">${refresh_button}</div>`;
+      cells += `<div class="cell">${refresh_button}</div>`;
       cells += `<div id="home-info" class="cell text-cell-right"></div>`; // Home info
       cells += `<div id="home-image" class="cell image-cell"><img src="${this.getBase64Data("home-normal")}"></div>`; // Home image
       cells += `<div id="power-allocation-arrows" class="cell arrow-cell"></div>`; // Power allocation arrows
@@ -581,7 +594,7 @@ class LuxPowerDistributionCard extends HTMLElement {
       )}"></div>`; // Power allocation image
       cells += `<div id="power-allocation-info" class="cell text-cell-left"></div>`; // Power allocation info
     } else {
-      cells += `<div id="refresh-button-cell" class="cell">${refresh_button}</div>`;
+      cells += `<div class="cell">${refresh_button}</div>`;
       cells += `<div id="home-info" class="cell text-cell-right"></div>`; // Home info
       cells += `<div id="home-image" class="cell image-cell"><img src="${this.getBase64Data("home-normal")}"></div>`; // Home image
       cells += `<div class="cell"></div>`;
@@ -754,10 +767,47 @@ class LuxPowerDistributionCard extends HTMLElement {
     }
   }
 
-  callRefreshService() {
-    if (this.config.lux_dongle) {
-      var lux_dongle = this.config.lux_dongle;
-      this._hass.callService("luxpower", "luxpower.luxpower_refresh_registers", { dongle: lux_dongle });
+  bindRefresh(card, hass, config) {
+    let refresh_button_left = card.querySelector("#refresh-button-left");
+    if (refresh_button_left) {
+      refresh_button_left.addEventListener("click", function (source) {
+        hass.callService("luxpower", "luxpower_refresh_registers", { dongle: config.lux_dongle });
+      });
+    }
+    let refresh_button_right = card.querySelector("#refresh-button-right");
+    if (refresh_button_right) {
+      refresh_button_right.addEventListener("click", function (source) {
+        hass.callService("luxpower", "luxpower_refresh_registers", { dongle: config.lux_dongle });
+      });
+    }
+  }
+
+  bindHistoryGraph(card, hass, config) {
+    const history_map = {
+      "#solar-image": "pv_power",
+      "#battery-image": "battery_soc",
+      "#grid-image": "grid_flow",
+      "#home-image": "home_consumption",
+    };
+
+    for (const [key, value] of Object.entries(history_map)) {
+      if (history_map.hasOwnProperty(key)) {
+        let button_element = card.querySelector(key);
+        if (button_element) {
+          button_element.addEventListener("click", function (source) {
+            const event = new Event("hass-more-info", {
+              bubbles: true,
+              cancelable: false,
+              composed: true,
+            });
+            event.detail = {
+              entityId: config[value].entity,
+            };
+            card.dispatchEvent(event);
+            return event;
+          });
+        }
+      }
     }
   }
 }
