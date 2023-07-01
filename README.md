@@ -23,12 +23,10 @@ DanteWinters/lux-power-distribution-card
 
 1. Download `lux-power-distribution-card.js` from the [latest release](https://github.com/DanteWinters/lux-power-distribution-card/releases/latest) and copy it into your `config/www` directory.
 
-2. Add the resource reference as described below.
+2. Add the resource reference:
+   1. Visit the Resources page in your Home Assistant instance [![Open your Home Assistant instance and show your dashboard resources.](https://my.home-assistant.io/badges/lovelace_resources.svg)](https://my.home-assistant.io/redirect/lovelace_resources/)
+   2. Add `lux-power-distribution-card.js` as a JavaScript Module.
 
-## Add resource reference
-
-Visit the Resources page in your Home Assistant install and add `lux-power-distribution-card.js` as a JavaScript Module.
- [![Open your Home Assistant instance and show your dashboard resources.](https://my.home-assistant.io/badges/lovelace_resources.svg)](https://my.home-assistant.io/redirect/lovelace_resources/)
 
 # Adding the card to the dashboard
 
