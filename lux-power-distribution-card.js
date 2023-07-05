@@ -305,15 +305,26 @@ class LuxPowerDistributionCard extends HTMLElement {
     // Info
     const home_info_element = this.card.querySelector("#home-info");
     if (home_info_element) {
+      var sub_text = "Home Usage";
+      var value = this.formatPowerStates("home_consumption");
+
+      if (
+        this.config.backup_power &&
+        this.config.backup_power.entity &&
+        parseInt(this.getConfigEntityState("home_consumption")) == 0 &&
+        parseInt(this.getConfigEntityState("backup_power")) > 0
+      ) {
+        sub_text = "Backup Power";
+        value = this.formatPowerStates("backup_power");
+      }
+
       home_info_element.innerHTML = `
         <div class="text-grid">
           <div class="cell">
-            <p class="header-text">${this.formatPowerStates("home_consumption")}</p>
+            <p class="sub-text">${sub_text}</p>
           </div>
           <div class="cell">
-            <p class="header-text">${
-              this.config.backup_power && this.config.backup_power.entity ? this.formatPowerStates("backup_power") : ""
-            }</p>
+            <p class="header-text">${value}</p>
           </div>
         </div>
       `;
@@ -336,7 +347,7 @@ class LuxPowerDistributionCard extends HTMLElement {
             <p class="sub-text">Allocated Power</p>
           </div>
           <div class="cell">
-            <p class="header-text">${parseInt(this.getAllocatedPower())}</p>
+            <p class="header-text">${parseInt(this.getAllocatedPower())} W</p>
           </div>
         </div>
       `;
@@ -382,22 +393,18 @@ class LuxPowerDistributionCard extends HTMLElement {
         display: flex;
         justify-content: left;
         text-align: left;
-        overflow: auto;
+        text-overflow: ellipsis;
         flex-wrap: wrap;
         word-wrap: break-word; /* Allow the text to wrap within the cell */
-        overflow: hidden; /* Hide any overflowed text */
-        flex-shrink: 1; /* Allow the text to shrink within the cell */
       }
       .text-cell-right {
         max-height: 100%;
         display: flex;
         justify-content: right;
         text-align: right;
-        overflow: auto;
+        text-overflow: ellipsis;
         flex-wrap: wrap;
         word-wrap: break-word; /* Allow the text to wrap within the cell */
-        overflow: hidden; /* Hide any overflowed text */
-        flex-shrink: 1; /* Allow the text to shrink within the cell */
       }
       .header-text { 
         font-size: 1.17em;
@@ -408,8 +415,10 @@ class LuxPowerDistributionCard extends HTMLElement {
         padding-right: 3px;
         padding-top: 3px;
         padding-bottom: 3px;
+        flex-shrik: 3;
       }
       .sub-text { 
+        font-size: 0.95em;
         line-height: 1;
         margin: 0;
         padding-left: 3px;
