@@ -165,15 +165,11 @@ class LuxPowerDistributionCard extends HTMLElement {
       // Charge info
       const battery_charge_info_element = this.card.querySelector("#battery-charge-info");
       battery_charge_info_element.innerHTML = `
-        <div class="text-grid">
-          <div class="cell">
-            <p class="header-text">${this.formatPowerStates("battery_flow")}</p>
-          </div>
-          <div class="cell">
-            <p class="sub-text">${
-              battery_flow > 0 ? "Battery Charging" : battery_flow < 0 ? "Battery Discharging" : "Idle"
-            }</p>
-          </div>
+        <div>
+          <p class="header-text">${this.formatPowerStates("battery_flow")}</p>
+          <p class="sub-text">${
+            battery_flow > 0 ? "Battery Charging" : battery_flow < 0 ? "Battery Discharging" : "Idle"
+          }</p>
         </div>
       `;
     }
@@ -184,13 +180,9 @@ class LuxPowerDistributionCard extends HTMLElement {
     const battery_soc_info_element = this.card.querySelector("#battery-soc-info");
     if (battery_soc_info_element) {
       battery_soc_info_element.innerHTML = `
-        <div class="text-grid">
-          <div class="cell">
-            <p class="header-text">${battery_soc}%</p>
-          </div>
-          <div class="cell">
-            <p class="header-text">${battery_voltage}</p>
-          </div>
+        <div>
+          <p class="header-text">${battery_soc}%</p>
+          <p class="header-text">${battery_voltage}</p>
         </div>
     `;
     }
@@ -214,13 +206,9 @@ class LuxPowerDistributionCard extends HTMLElement {
       }
       // Info
       solar_info_element.innerHTML = `
-        <div class="text-grid">
-          <div class="cell">
-            <p class="header-text">${this.formatPowerStates("pv_power")}</p>
-          </div>
-          <div class="cell">
-            <p class="sub-text">${pv_power > 0 ? "Solar Import" : ""}</p>
-          </div>
+        <div>
+          <p class="header-text">${this.formatPowerStates("pv_power")}</p>
+          <p class="sub-text">${pv_power > 0 ? "Solar Import" : ""}</p>
         </div>
       `;
     }
@@ -266,17 +254,13 @@ class LuxPowerDistributionCard extends HTMLElement {
     const grid_info_element = this.card.querySelector("#grid-info");
     if (grid_info_element) {
       grid_info_element.innerHTML = `
-        <div class="text-grid">
-          <div class="cell">
-            <p class="header-text">${this.formatPowerStates("grid_flow")}</p>
-          </div>
-          <div class="cell">
-            <p class="header-text">${
-              this.config.grid_voltage && this.config.grid_voltage.entity
-                ? `${this.getConfigEntityState("grid_voltage")} Vac${grid_emoji}`
-                : ""
-            }</p>
-          </div>
+        <div>
+          <p class="header-text">${this.formatPowerStates("grid_flow")}</p>
+          <p class="header-text">${
+            this.config.grid_voltage && this.config.grid_voltage.entity
+              ? `${this.getConfigEntityState("grid_voltage")} Vac${grid_emoji}`
+              : ""
+          }</p>
         </div>
       `;
     }
@@ -319,13 +303,9 @@ class LuxPowerDistributionCard extends HTMLElement {
       }
 
       home_info_element.innerHTML = `
-        <div class="text-grid">
-          <div class="cell">
-            <p class="sub-text">${sub_text}</p>
-          </div>
-          <div class="cell">
-            <p class="header-text">${value}</p>
-          </div>
+        <div>
+          <p class="sub-text">${sub_text}</p>
+          <p class="header-text">${value}</p>
         </div>
       `;
     }
@@ -342,13 +322,9 @@ class LuxPowerDistributionCard extends HTMLElement {
 
       const power_allocation_info_element = this.card.querySelector("#power-allocation-info");
       power_allocation_info_element.innerHTML = `
-        <div class="text-grid">
-          <div class="cell">
-            <p class="sub-text">Allocated Power</p>
-          </div>
-          <div class="cell">
-            <p class="header-text">${parseInt(this.getAllocatedPower())} W</p>
-          </div>
+        <div>
+          <p class="sub-text">Allocated Power</p>
+          <p class="header-text">${parseInt(this.getAllocatedPower())} W</p>
         </div>
       `;
     }
@@ -370,14 +346,7 @@ class LuxPowerDistributionCard extends HTMLElement {
       }
       .diagram-grid img {
         max-width: 100%;
-        height: auto;
-      }
-      .text-grid {
-        display: grid;
-        grid-template-columns: repeat(1, 1fr);
-        grid-template-rows: repeat(2, 1fr);
-        width: 100%;
-        height: 100%;
+        max-height: 100%;
       }
       
       /* CELLS */
@@ -388,43 +357,35 @@ class LuxPowerDistributionCard extends HTMLElement {
       }
       
       /* TEXT */
-      .text-cell-left {
-        max-height: 100%;
+      .text-cell {
+        /*max-height: 100%;*/
         display: flex;
+        /*text-overflow: ellipsis;
+        flex-wrap: wrap;
+        word-wrap: break-word;*/ /* Allow the text to wrap within the cell */
+      }
+      /* .text-cell left {
         justify-content: left;
         text-align: left;
-        text-overflow: ellipsis;
-        flex-wrap: wrap;
-        word-wrap: break-word; /* Allow the text to wrap within the cell */
       }
-      .text-cell-right {
-        max-height: 100%;
-        display: flex;
+      .text-cell right {
         justify-content: right;
         text-align: right;
-        text-overflow: ellipsis;
-        flex-wrap: wrap;
-        word-wrap: break-word; /* Allow the text to wrap within the cell */
-      }
+      } */
       .header-text { 
-        font-size: 1.17em;
+        font-size: min(4vw, 1.17em);
         font-weight: bold;
         line-height: 1;
         margin: 0;
         padding-left: 3px;
         padding-right: 3px;
-        padding-top: 3px;
-        padding-bottom: 3px;
-        flex-shrik: 3;
       }
       .sub-text { 
-        font-size: 0.95em;
+        font-size: min(2.5vw, 0.95em);
         line-height: 1;
         margin: 0;
         padding-left: 3px;
         padding-right: 3px;
-        padding-top: 3px;
-        padding-bottom: 3px;
       }
       
       /* IMAGE CELLS */
@@ -435,7 +396,7 @@ class LuxPowerDistributionCard extends HTMLElement {
         text-align: center;
         justify-content: center;
         width: auto;
-        height: 100%;
+
         object-fit: contain;
         position: relative;
       }
@@ -446,9 +407,13 @@ class LuxPowerDistributionCard extends HTMLElement {
       
       /* ARROWS */
       .arrow-cell {
+        margin: auto;
         display: flex;
         align-items: center;
+        text-align: center;
         justify-content: center;
+        width: auto;
+        object-fit: contain;
         position: relative;
       }
       .arrows-left {
@@ -530,12 +495,12 @@ class LuxPowerDistributionCard extends HTMLElement {
     cells += `<div id="grid-image" class="cell image-cell"><img src="${this.getBase64Data("grid")}"></div>`; // Grid image
 
     // Row 3
-    cells += `<div id="battery-soc-info" class="cell text-cell-left"></div>`; // Battery SOC info
+    cells += `<div id="battery-soc-info" class="cell text-cell"></div>`; // Battery SOC info
     cells += `<div class="cell"></div>`;
     cells += `<div id="home-arrows" class="cell arrow-cell"></div>`; // Home arrows
     cells += `<div class="cell"></div>`;
     cells += `<div class="cell"></div>`;
-    cells += `<div id="grid-info" class="cell text-cell-right"></div>`; // Grid info
+    cells += `<div id="grid-info" class="cell text-cell"></div>`; // Grid info
 
     // Row 4
     cells += this.generateHomeCells();
@@ -559,11 +524,11 @@ class LuxPowerDistributionCard extends HTMLElement {
       cells += `<div class="cell"></div>`;
       cells += `<div class="cell"></div>`;
       cells += `<div id="solar-image" class="cell image-cell"><img src="${this.getBase64Data("solar")}"></div>`; // Solar image
-      cells += `<div id="solar-info" class="cell text-cell-left"></div>`; // Solar info
+      cells += `<div id="solar-info" class="cell text-cell"></div>`; // Solar info
       cells += `<div class="cell"></div>`;
       cells += `<div class="cell"></div>`;
       // Row 1
-      cells += `<div id="battery-charge-info" class="cell text-cell-left"></div>`; // Battery charge/discharge info
+      cells += `<div id="battery-charge-info" class="cell text-cell"></div>`; // Battery charge/discharge info
       cells += `<div class="cell"></div>`;
       cells += `<div id="solar-arrows" class="cell arrow-cell"></div>`; // Solar arrows
       cells += `<div class="cell"></div>`;
@@ -571,7 +536,7 @@ class LuxPowerDistributionCard extends HTMLElement {
       cells += `<div class="cell">${refresh_button}</div>`;
     } else {
       // Row 1
-      cells += `<div id="battery-charge-info" class="cell text-cell-left"></div>`; // Battery charge/discharge info
+      cells += `<div id="battery-charge-info" class="cell text-cell"></div>`; // Battery charge/discharge info
       cells += `<div class="cell"></div>`;
       cells += `<div class="cell"></div>`;
       cells += `<div class="cell"></div>`;
@@ -595,16 +560,16 @@ class LuxPowerDistributionCard extends HTMLElement {
     if (this.config.energy_allocations && this.config.energy_allocations.entities) {
       // Power Allocations
       cells += `<div class="cell">${refresh_button}</div>`;
-      cells += `<div id="home-info" class="cell text-cell-right"></div>`; // Home info
+      cells += `<div id="home-info" class="cell text-cell"></div>`; // Home info
       cells += `<div id="home-image" class="cell image-cell"><img src="${this.getBase64Data("home-normal")}"></div>`; // Home image
       cells += `<div id="power-allocation-arrows" class="cell arrow-cell"></div>`; // Power allocation arrows
       cells += `<div id="power-allocation-image" class="cell image-cell"><img src="${this.getBase64Data(
         "home-normal"
       )}"></div>`; // Power allocation image
-      cells += `<div id="power-allocation-info" class="cell text-cell-left"></div>`; // Power allocation info
+      cells += `<div id="power-allocation-info" class="cell text-cell"></div>`; // Power allocation info
     } else {
       cells += `<div class="cell">${refresh_button}</div>`;
-      cells += `<div id="home-info" class="cell text-cell-right"></div>`; // Home info
+      cells += `<div id="home-info" class="cell text-cell"></div>`; // Home info
       cells += `<div id="home-image" class="cell image-cell"><img src="${this.getBase64Data("home-normal")}"></div>`; // Home image
       cells += `<div class="cell"></div>`;
       cells += `<div class="cell"></div>`;
