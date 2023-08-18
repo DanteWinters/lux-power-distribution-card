@@ -379,6 +379,8 @@ class LuxPowerDistributionCard extends HTMLElement {
         margin: 0;
         padding-left: 3px;
         padding-right: 3px;
+        padding-top: 1.5px;
+        padding-bottom: 1.5px;
       }
       .sub-text { 
         font-size: min(2.5vw, 0.95em);
@@ -386,6 +388,8 @@ class LuxPowerDistributionCard extends HTMLElement {
         margin: 0;
         padding-left: 3px;
         padding-right: 3px;
+        padding-top: 1.5px;
+        padding-bottom: 1.5px;
       }
       
       /* IMAGE CELLS */
@@ -626,16 +630,13 @@ class LuxPowerDistributionCard extends HTMLElement {
 
   generateStatus() {
     if (this.config.use_lux_status_codes) {
-      var grid_status = `Status: Normal 🟢`;
       const status_info = this.card.querySelector("#grid-status-info");
-      if (this.config.lux_fail_status_codes && this.config.lux_status_code && this.config.lux_status_code.entity) {
-        if (this.config.lux_fail_status_codes.includes(parseInt(this.getConfigEntityState("lux_status_code")))) {
-          grid_status = `Status: Warning 🔴`;
-        }
+      if (this.config.lux_status_code && this.config.lux_status_code.entity) {
+        var grid_status = this.getStatusMessage(parseInt(this.getConfigEntityState("lux_status_code")));
+        status_info.innerHTML = `
+          <p class="grid-status">${grid_status}</p>
+        `;
       }
-      status_info.innerHTML = `
-        <p class="grid-status">${grid_status}</p>
-      `;
     }
   }
 
@@ -715,8 +716,8 @@ class LuxPowerDistributionCard extends HTMLElement {
 
   getAllocatedPower() {
     let allocatedEnergy = 0;
-    for (let i = 0; i < this.config["energy_allocations"].entities.length; i++) {
-      let entity = this._hass.states[this.config["energy_allocations"].entities[i]];
+    for (let i = 0; i < this.config.energy_allocations.entities.length; i++) {
+      let entity = this._hass.states[this.config.energy_allocations.entities[i]];
       let entity_value = entity.state;
       let entity_unit = entity.attributes.unit_of_measurement;
       if (entity_value === "unavailable" || entity_value === "unknown") {
@@ -729,6 +730,78 @@ class LuxPowerDistributionCard extends HTMLElement {
       }
     }
     return allocatedEnergy;
+  }
+
+  getStatusMessage(status_code) {
+    var status_level = 0;
+    var message = "Warning";
+
+    switch (status_code) {
+      case 0:
+        message = `Standby`;
+        status_level = 0;
+        break;
+      case 1:
+        message = `Error`;
+        status_level = 2;
+        break;
+      case 2:
+        message = `Inverting (Programming)`;
+        status_level = 1;
+        break;
+      case 4:
+        message = `Normal`;
+        status_level = 0;
+        break;
+      case 9:
+        message = `Normal (Selling)`;
+        status_level = 0;
+        break;
+      case 10:
+      case 12:
+      case 16:
+      case 20:
+      case 32:
+      case 40:
+        message = `Normal`;
+        status_level = 0;
+        break;
+      case 17:
+        message = `High temp`;
+        status_level = 2;
+        break;
+      case 64:
+      case 136:
+      case 192:
+        if (this.config.show_no_grid_as_warning) {
+          message = `No grid`;
+          status_level = 1;
+        } else {
+          message = `Normal`;
+          status_level = 0;
+        }
+        break;
+      default:
+        message = `Unknown code ${status_code}`;
+        status_level = 2;
+        break;
+    }
+
+    var indicator = "";
+    switch (status_level) {
+      case 0:
+        indicator = `🟢`;
+        break;
+      case 1:
+        indicator = `🟠`;
+        break;
+      case 2:
+      default:
+        indicator = `🔴`;
+        break;
+    }
+
+    return `Status: ${message} ${indicator}`;
   }
 
   formatPowerStates(config_entity) {
