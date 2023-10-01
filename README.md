@@ -68,6 +68,8 @@ The following is a list of configs for the card:
 | grid_indicator | dot | bool | If this is set to true and the grid voltage drops to 0, a red indicator will be added next to the grid voltage text. (Requires a grid voltage entity.) |
 | update_time | show_last_update | bool | If the update time entity has a timestamp attribute, it can be used to show how long since the last update. |
 | status_codes | no_grid_is_warning | bool | Some status codes (64, 136 and 192) are shown when grid is not available. If this value is true, these codes will show up as a warning on the status. If the value is false, these values will show up as normal. |
+| parallel | average_voltage | bool | When using multiple inverters, there is a default created item on the list of inverters called "Parallel" that averages all the values from the different inverters. If *average_voltage* is true, the battery and grid voltages will be averaged and shown on the Parallel setting. Otherwise it will not show the voltages there. |
+| parallel | parallel_first | bool | When using multiple inverters, there is a default created item on the list of inverters called "Parallel" that averages all the values from the different inverters. If *parallel_first* is true, the "Parallel" option will be shown first of the list, otherwise it will be last. |
 
 # LuxpowerTek integration
 
@@ -80,6 +82,9 @@ If you have the Luxpower integration, you can use the following code directly (e
  ```yaml
 type: custom:lux-power-distribution-card
 inverter_count: 1
+parallel:
+  average_voltage: true
+  parallel_first: true
 battery_soc:
   entities:
     - sensor.lux_battery
@@ -170,9 +175,7 @@ The four entity images on the card can be clicked to display the history of the 
 With v1.0.0, support for parallel inverters have arrived! In order to use parallel inverters, simply indicate the number of inverters you are using in the config, and add the additional inverter's entities under their corresponding headers. Take note of the *inverter_alias* and *lux_dongle* config values when using parallel inverters.
 
 ### Known issues
- - Currently there is no option to mix the values, but that is on the roadmap.
- - The refresh button only works on the first dongle value added.
-
+ - The status that is shown is for the first inverter. The next update will hopefully 
 
 # Developer's note
 

@@ -31,17 +31,17 @@ export function generateStyles(config) {
     /*max-height: 100%;*/
     display: flex;
     /*text-overflow: ellipsis;
-  flex-wrap: wrap;
-  word-wrap: break-word;*/ /* Allow the text to wrap within the cell */
+    flex-wrap: wrap;
+    word-wrap: break-word;*/ /* Allow the text to wrap within the cell */
   }
   /* .text-cell left {
-  justify-content: left;
-  text-align: left;
-  }
-  .text-cell right {
-  justify-content: right;
-  text-align: right;
-  } */
+    justify-content: left;
+    text-align: left;
+    }
+    .text-cell right {
+    justify-content: right;
+    text-align: right;
+    } */
   .header-text {
     font-size: min(4vw, 1.17em);
     font-weight: bold;
@@ -180,16 +180,18 @@ export function generateStyles(config) {
     margin: 0;
     line-height: 1;
   }  
-`;
+  `;
 }
 
 export const card_base = `
-<ha-card>
-  <div id="inv-info"></div>
-  <div id="card-grid" class="diagram-grid"></div>
-  <div id="datetime-info" class="update-time"></div>
-</ha-card>
-
+  <ha-card>
+    <div id="inv-info">
+    </div>
+    <div id="card-grid" class="diagram-grid">
+    </div>
+    <div id="datetime-info" class="update-time">
+    </div>
+  </ha-card>
 `;
 
 export function generateStatus(config) {
@@ -199,8 +201,14 @@ export function generateStatus(config) {
   if (config.inverter_alias.is_used && config.inverter_count > 1) {
     // let text_box_options = `<option value="parallel">Parallel</option>`;
     let text_box_options = ``;
+    if (config.parallel.parallel_first) {
+      text_box_options += `<option value="${config.inverter_count}">Parallel</option>`;
+    }
     for (let i = 0; i < config.inverter_count; i++) {
       text_box_options += `<option value="${i}">${config.inverter_alias.values[i]}</option>`;
+    }
+    if (!config.parallel.parallel_first) {
+      text_box_options += `<option value="${config.inverter_count}">Parallel</option>`;
     }
     text_box_full = `
       <select class="inv-select" name="Inverters" id="inverter-selector">

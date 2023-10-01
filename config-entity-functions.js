@@ -87,6 +87,18 @@ export function buildConfig(config) {
     }
   }
 
+  // Check parallel settings
+  if (config.parallel) {
+    if (config.parallel.average_voltage) {
+      new_config.parallel.average_voltage = true;
+    }
+    if (config.parallel.parallel_first) {
+      new_config.parallel.parallel_first = true;
+    } else {
+      new_config.parallel.parallel_first = false;
+    }
+  }
+
   validateConfig(new_config);
 
   return new_config;
@@ -141,38 +153,64 @@ function importConfigValues(config, new_config, inverter_count, object_name) {
 }
 
 export function getEntitiesState(config, hass, config_entity, index) {
-  const entity = hass.states[config[config_entity].entities[index]];
-
-  if (entity.state) {
-    if (entity.state === "unavailable" || entity.state === "unknown") {
-      return "-";
-    } else if (isNaN(entity.state)) {
-      return entity.state;
-    } else {
-      return entity.state;
+  const entity_name = config[config_entity].entities[index];
+  try {
+    const entity = hass.states[entity_name];
+    if (entity.state) {
+      if (entity.state === "unavailable" || entity.state === "unknown") {
+        return "-";
+      } else {
+        return entity.state;
+      }
     }
+    return "-";
+  } catch (error) {
+    throw new Error(`Invalid entity: ${entity_name}`);
   }
-  return "-";
+}
+
+export function getEntitiesNumState(config, hass, config_entity, index, is_int = true) {
+  let value = 0;
+  if (index == -1) {
+    for (let i = 0; i < config.inverter_count; i++) {
+      value += parseFloat(getEntitiesState(config, hass, config_entity, i));
+    }
+    value = value / config.inverter_count;
+  } else {
+    value = parseFloat(getEntitiesState(config, hass, config_entity, index));
+  }
+  if (is_int) {
+    return parseInt(value);
+  }
+  return value;
 }
 
 export function getEntitiesAttribute(config, hass, config_entity, attribute_name, index) {
-  const entity = hass.states[config[config_entity].entities[index]];
-
-  if (entity.attributes && entity.attributes[attribute_name]) {
-    return entity.attributes[attribute_name];
-  } else {
-    return "-";
+  const entity_name = config[config_entity].entities[index];
+  try {
+    const entity = hass.states[entity_name];
+    if (entity.attributes && entity.attributes[attribute_name]) {
+      return entity.attributes[attribute_name];
+    } else {
+      return "-";
+    }
+  } catch (error) {
+    throw new Error(`Invalid entity: ${entity_name}`);
   }
 }
 
 export function getEntitiesUnit(config, hass, config_entity, index) {
-  const entity = hass.states[config[config_entity].entities[index]];
-
-  if (entity.state) {
-    if (isNaN(entity.state)) return "-";
-    else return entity.attributes.unit_of_measurement ?? "";
+  const entity_name = config[config_entity].entities[index];
+  try {
+    const entity = hass.states[config[config_entity].entities[index]];
+    if (entity.state) {
+      if (isNaN(entity.state)) return "-";
+      else return entity.attributes.unit_of_measurement ?? "";
+    }
+    return "";
+  } catch (error) {
+    throw new Error(`Invalid entity: ${entity_name}`);
   }
-  return "";
 }
 
 export function getStatusMessage(status_code, show_no_grid_as_warning) {
