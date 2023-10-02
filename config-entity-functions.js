@@ -169,13 +169,15 @@ export function getEntitiesState(config, hass, config_entity, index) {
   }
 }
 
-export function getEntitiesNumState(config, hass, config_entity, index, is_int = true) {
+export function getEntitiesNumState(config, hass, config_entity, index, is_int = true, is_avg = false) {
   let value = 0;
   if (index == -1) {
     for (let i = 0; i < config.inverter_count; i++) {
       value += parseFloat(getEntitiesState(config, hass, config_entity, i));
     }
-    value = value / config.inverter_count;
+    if (is_avg) {
+      value = value / config.inverter_count;
+    }
   } else {
     value = parseFloat(getEntitiesState(config, hass, config_entity, index));
   }

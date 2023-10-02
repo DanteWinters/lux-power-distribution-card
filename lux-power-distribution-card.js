@@ -1,8 +1,10 @@
+import { LitElement } from "https://unpkg.com/lit?module";
+
 import * as cef from "./config-entity-functions.js";
 import * as hf from "./html-functions.js";
 import * as constants from "./constants.js";
 
-class LuxPowerDistributionCard extends HTMLElement {
+class LuxPowerDistributionCard extends LitElement {
   set hass(hass) {
     this._hass = hass;
 
@@ -250,7 +252,7 @@ class LuxPowerDistributionCard extends HTMLElement {
   }
 
   updateBattery(index) {
-    let battery_soc = cef.getEntitiesNumState(this.config, this._hass, "battery_soc", index);
+    let battery_soc = cef.getEntitiesNumState(this.config, this._hass, "battery_soc", index, true, true);
     let battery_flow = cef.getEntitiesNumState(this.config, this._hass, "battery_flow", index);
     const battery_arrow_element = this.card.querySelector("#battery-arrows");
     // Image
@@ -291,7 +293,8 @@ class LuxPowerDistributionCard extends HTMLElement {
         this._hass,
         "battery_voltage",
         index,
-        false
+        false,
+        true
       )} Vdc (avg)`;
     }
     const battery_soc_info_element = this.card.querySelector("#battery-soc-info");
@@ -353,7 +356,9 @@ class LuxPowerDistributionCard extends HTMLElement {
             this.config,
             this._hass,
             "grid_voltage",
-            index
+            index,
+            false,
+            true
           )} Vac (avg)${grid_emoji}`;
         }
       }
