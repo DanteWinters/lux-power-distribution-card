@@ -15,6 +15,7 @@ A simple power distribution card of an inverter and battery system, for [Home As
 ## HACS
 
 There is a PR to add this card to the HACS defaults, but for now this card can be added by adding the URL as a custom repository source in HACS:
+
 ```
 DanteWinters/lux-power-distribution-card
 ```
@@ -26,7 +27,6 @@ DanteWinters/lux-power-distribution-card
 2. Add the resource reference:
    1. Visit the Resources page in your Home Assistant instance [![Open your Home Assistant instance and show your dashboard resources.](https://my.home-assistant.io/badges/lovelace_resources.svg)](https://my.home-assistant.io/redirect/lovelace_resources/)
    2. Add `lux-power-distribution-card.js` as a JavaScript Module.
-
 
 # Adding the card to the dashboard
 
@@ -175,7 +175,26 @@ The four entity images on the card can be clicked to display the history of the 
 With v1.0.0, support for parallel inverters have arrived! In order to use parallel inverters, simply indicate the number of inverters you are using in the config, and add the additional inverter's entities under their corresponding headers. Take note of the *inverter_alias* and *lux_dongle* config values when using parallel inverters.
 
 ### Known issues
- - The status that is shown is for the first inverter. The next update will hopefully 
+
+- The status that is shown is for the first inverter. The next feature update update will hopefully have it covered.
+
+# Card not loading issue
+
+With this card, there has been multiple isntances of the card not loading. From my exoeience, the best way to fix this is to clear the cache and it should load. I can give instructions for both Android mobile devices and the browser.
+
+### Android
+
+1. Find *Home Assistant* in the list of apps in settings.
+2. This step may differ depending on the Android device. Find anything that indicates data used or storage.
+3. When there, find the option to clear all the data (cache and storage). Clearning this will log you out of the app and you'll need to log in again.
+4. Card should then show up. If it doesn't, please log a bug.
+
+### Web browser
+
+1. With the page open, open the developer console on the browser. Usually it's *F12*.
+2. Click on the refresh button.
+3. Rick-click on the refresh button to open a menu.
+4. Choose the option *Empty Cache and Hard Reload*, or the option closest to this description.
 
 # Developer's note
 
