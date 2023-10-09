@@ -1,10 +1,8 @@
-import { LitElement } from "https://unpkg.com/lit?module";
-
 import * as cef from "./config-entity-functions.js";
 import * as hf from "./html-functions.js";
 import * as constants from "./constants.js";
 
-class LuxPowerDistributionCard extends LitElement {
+class LuxPowerDistributionCard extends HTMLElement {
   set hass(hass) {
     this._hass = hass;
 
@@ -55,7 +53,7 @@ class LuxPowerDistributionCard extends LitElement {
     this.styles.innerHTML = hf.generateStyles(this.config);
 
     // Generate Status
-    const inv_info_element = this.card.querySelector("#inv-info");
+    const inv_info_element = this.card.querySelector("#taskbar-grid");
     if (inv_info_element) {
       inv_info_element.innerHTML = hf.generateStatus(this.config);
     }
@@ -214,7 +212,7 @@ class LuxPowerDistributionCard extends LitElement {
     if (index == -1) {
       index = 0;
     }
-    const status_element = this.card.querySelector("#status-info");
+    const status_element = this.card.querySelector("#status-cell");
     if (status_element) {
       let msg = cef.getStatusMessage(
         parseInt(cef.getEntitiesState(this.config, this._hass, "status_codes", index)),
@@ -233,13 +231,8 @@ class LuxPowerDistributionCard extends LitElement {
       // Arrow
       const arrow_direction = pv_power > 0 ? "arrows-down" : "arrows-none";
       if (solar_arrow_element.className != `cell arrow-cell ${arrow_direction}`) {
-        if (arrow_direction != "arrows-none") {
-          solar_arrow_element.setAttribute("class", `cell arrow-cell ${arrow_direction}`);
-          solar_arrow_element.innerHTML = hf.generateArrows();
-        } else {
-          solar_arrow_element.setAttribute("class", `cell arrow-cell arrows-none`);
-          solar_arrow_element.innerHTML = ``;
-        }
+        solar_arrow_element.setAttribute("class", `cell arrow-cell ${arrow_direction}`);
+        solar_arrow_element.innerHTML = hf.generateArrows();
       }
       // Info
       solar_info_element.innerHTML = `
@@ -263,14 +256,10 @@ class LuxPowerDistributionCard extends LitElement {
     if (this.config.battery_flow.is_used) {
       // Arrow
       const arrow_direction = battery_flow < 0 ? "arrows-right" : battery_flow > 0 ? "arrows-left" : "arrows-none";
-      if (battery_arrow_element.className != `cell arrow-cell ${arrow_direction}`) {
-        if (arrow_direction != "arrows-none") {
-          if (battery_arrow_element) {
-            battery_arrow_element.setAttribute("class", `cell arrow-cell ${arrow_direction}`);
-            battery_arrow_element.innerHTML = hf.generateArrows();
-          }
-        } else {
-          battery_arrow_element.innerHTML = ``;
+      if (battery_arrow_element) {
+        if (battery_arrow_element.className != `cell arrow-cell ${arrow_direction}`) {
+          battery_arrow_element.setAttribute("class", `cell arrow-cell ${arrow_direction}`);
+          battery_arrow_element.innerHTML = hf.generateArrows();
         }
       }
       // Charge info
@@ -316,17 +305,10 @@ class LuxPowerDistributionCard extends LitElement {
     if (grid_arrow_1_element && grid_arrow_2_element) {
       const arrow_direction = grid_flow < 0 ? "arrows-left" : grid_flow > 0 ? "arrows-right" : "arrows-none";
       if (grid_arrow_1_element.className != `cell arrow-cell ${arrow_direction}`) {
-        if (arrow_direction != "arrows-none") {
-          grid_arrow_1_element.setAttribute("class", `cell arrow-cell ${arrow_direction}`);
-          grid_arrow_2_element.setAttribute("class", `cell arrow-cell ${arrow_direction}`);
-          grid_arrow_1_element.innerHTML = hf.generateArrows();
-          grid_arrow_2_element.innerHTML = hf.generateArrows();
-        } else {
-          grid_arrow_1_element.setAttribute("class", `cell arrow-cell arrows-none`);
-          grid_arrow_2_element.setAttribute("class", `cell arrow-cell arrows-none`);
-          grid_arrow_2_element.innerHTML = ``;
-          grid_arrow_2_element.innerHTML = ``;
-        }
+        grid_arrow_1_element.setAttribute("class", `cell arrow-cell ${arrow_direction}`);
+        grid_arrow_2_element.setAttribute("class", `cell arrow-cell ${arrow_direction}`);
+        grid_arrow_1_element.innerHTML = hf.generateArrows();
+        grid_arrow_2_element.innerHTML = hf.generateArrows();
       }
     }
     var grid_emoji = ``;
@@ -382,13 +364,8 @@ class LuxPowerDistributionCard extends LitElement {
         : 0;
       const arrow_direction = home_consumption > 0 || backup_power > 0 ? "arrows-down" : "arrows-none";
       if (home_arrow_element.className != `cell arrow-cell ${arrow_direction}`) {
-        if (arrow_direction != "arrows-none") {
-          home_arrow_element.setAttribute("class", `cell arrow-cell ${arrow_direction}`);
-          home_arrow_element.innerHTML = hf.generateArrows();
-        } else {
-          home_arrow_element.setAttribute("class", `cell arrow-cell arrows-none`);
-          home_arrow_element.innerHTML = ``;
-        }
+        home_arrow_element.setAttribute("class", `cell arrow-cell ${arrow_direction}`);
+        home_arrow_element.innerHTML = hf.generateArrows();
       }
     }
     // Info

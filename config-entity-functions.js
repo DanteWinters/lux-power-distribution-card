@@ -184,7 +184,7 @@ export function getEntitiesNumState(config, hass, config_entity, index, is_int =
   if (is_int) {
     return parseInt(value);
   }
-  return value;
+  return Math.round(value * 100) / 100;
 }
 
 export function getEntitiesAttribute(config, hass, config_entity, attribute_name, index) {
