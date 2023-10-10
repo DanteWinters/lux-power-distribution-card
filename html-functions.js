@@ -5,7 +5,6 @@ export function generateStyles(config) {
   /* CARD */
   ha-card {
     width: auto;
-    padding: 1px;
   }
   
   /* GRID */
@@ -13,6 +12,17 @@ export function generateStyles(config) {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
     grid-template-rows: repeat(${config.pv_power.is_used ? 5 : 4}, 1fr);
+    padding-left: 5px;
+    padding-right: 5px;
+    padding-top: 1px;
+  }
+  .status-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(1, 1fr);
+    padding-left: 5px;
+    padding-right: 5px;
+    padding-top: 4px;
   }
   .diagram-grid img {
     max-width: 100%;
@@ -169,6 +179,9 @@ export function generateStyles(config) {
     text-align: left;
     margin: 0;
     line-height: 1;
+    padding-left: 5px;
+    padding-right: 5px;
+    padding-bottom: 5px;
   }
   .grid-status {
     text-align: right;
@@ -185,7 +198,7 @@ export function generateStyles(config) {
 
 export const card_base = `
   <ha-card>
-    <div id="inv-info">
+    <div id="taskbar-grid" class="status-grid">
     </div>
     <div id="card-grid" class="diagram-grid">
     </div>
@@ -218,15 +231,17 @@ export function generateStatus(config) {
   }
 
   if (config.status_codes.is_used) {
-    status_message_full = `
-      <p id="status-info" class="grid-status">Card starting...</p>
-    `;
+    status_message_full = `Card starting...`;
   }
 
   return `
-${text_box_full}
-${status_message_full}
-`;
+    <div id="select-cell" class="cell">
+      ${text_box_full}
+    </div>
+    <div id="status-cell" class="cell grid-status">
+      ${status_message_full}
+    </div>
+  `;
 }
 
 export function generateGrid(config) {
@@ -319,11 +334,11 @@ export function generateDateTime(config) {
   var date_time_info = ``;
   if (config.update_time.is_used) {
     var date_time_info = `
-      <p id="time-info" class="update-time">Last update at: -</p>
+      <p id="time-info">Last update at: -</p>
     `;
     if (config.update_time.show_last_update) {
       date_time_info += `
-        <p id="since-info" class="update-time">-</p>
+        <p id="since-info">-</p>
     `;
     }
   }
