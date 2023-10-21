@@ -126,10 +126,14 @@ class LuxPowerDistributionCard extends HTMLElement {
         }
         if (index == config.inverter_count) {
           for (let i = 0; i < config.inverter_count; i++) {
-            hass.callService("luxpower", "luxpower_refresh_registers", { dongle: config.lux_dongle.values[i] });
+            hass.callService("luxpower", "luxpower_refresh_registers", {
+              dongle: config.lux_dongle.values[i],
+            });
           }
         } else {
-          hass.callService("luxpower", "luxpower_refresh_registers", { dongle: config.lux_dongle.values[index] });
+          hass.callService("luxpower", "luxpower_refresh_registers", {
+            dongle: config.lux_dongle.values[index],
+          });
         }
       });
     }
@@ -149,10 +153,14 @@ class LuxPowerDistributionCard extends HTMLElement {
         }
         if (index == config.inverter_count) {
           for (let i = 0; i < config.inverter_count; i++) {
-            hass.callService("luxpower", "luxpower_refresh_registers", { dongle: config.lux_dongle.values[i] });
+            hass.callService("luxpower", "luxpower_refresh_registers", {
+              dongle: config.lux_dongle.values[i],
+            });
           }
         } else {
-          hass.callService("luxpower", "luxpower_refresh_registers", { dongle: config.lux_dongle.values[index] });
+          hass.callService("luxpower", "luxpower_refresh_registers", {
+            dongle: config.lux_dongle.values[index],
+          });
         }
       });
     }
@@ -209,16 +217,56 @@ class LuxPowerDistributionCard extends HTMLElement {
   }
 
   updateStatus(index) {
+    let msg = "";
     if (index == -1) {
-      index = 0;
-    }
-    const status_element = this.card.querySelector("#status-cell");
-    if (status_element) {
-      let msg = cef.getStatusMessage(
+      let statuses = [];
+      let normal_cnt = 0;
+      let error_cnt = 0;
+      for (let i = 0; i < this.config.inverter_count; i++) {
+        let msg_i = cef.getStatusMessage(
+          parseInt(cef.getEntitiesState(this.config, this._hass, "status_codes", i)),
+          this.config.status_codes.no_grid_is_warning
+        );
+        statuses.push(msg_i);
+        if (msg_i == `Normal 🟢`) {
+          normal_cnt++;
+        } else {
+          error_cnt++;
+        }
+      }
+      if (error_cnt == 0) {
+        // no errors
+        msg = `Status: ${statuses[0]}`;
+      } else if (error_cnt == 1) {
+        // single error
+        let filtered = statuses.filter(function (stat) {
+          return stat !== "Normal 🟢";
+        });
+        let fault_index = statuses.indexOf(filtered[0]);
+        msg = `${this.config.inverter_alias.values[fault_index]}: ${statuses[fault_index]}`;
+      } else {
+        // Multiple or multiple of same
+        let filtered = statuses.filter(function (stat) {
+          return stat !== "Normal 🟢";
+        });
+        let filtered_again = filtered.filter(function (stat) {
+          return stat !== filtered[0];
+        });
+        if (filtered_again.length == 0) {
+          msg = `Status: ${statuses[0]}`;
+        } else {
+          msg = `Multiple errors 🔴`;
+        }
+      }
+    } else {
+      msg = cef.getStatusMessage(
         parseInt(cef.getEntitiesState(this.config, this._hass, "status_codes", index)),
         this.config.status_codes.no_grid_is_warning
       );
-
+      msg = `Status: ${msg}`;
+    }
+    const status_element = this.card.querySelector("#status-cell");
+    if (status_element) {
       status_element.innerHTML = msg;
     }
   }

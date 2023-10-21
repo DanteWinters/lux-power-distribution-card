@@ -284,5 +284,5 @@ export function getStatusMessage(status_code, show_no_grid_as_warning) {
       break;
   }
 
-  return `Status: ${message} ${indicator}`;
+  return `${message} ${indicator}`;
 }

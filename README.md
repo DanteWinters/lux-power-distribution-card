@@ -174,19 +174,22 @@ The four entity images on the card can be clicked to display the history of the 
 
 With v1.0.0, support for parallel inverters have arrived! In order to use parallel inverters, simply indicate the number of inverters you are using in the config, and add the additional inverter's entities under their corresponding headers. Take note of the *inverter_alias* and *lux_dongle* config values when using parallel inverters.
 
-### Known issues
+The status bar for the parallel inverters works as follows:
 
-- The status that is shown is for the first inverter. The next feature update update will hopefully have it covered.
+- If both inverters have normal status, it will display a normal status.
+- If only one inverter has an non-normal status, the inverter alias will be displayed along with the non-normal status.
+- If all the inverters have the same error (i.e. 'no-grid'), it will display this error on the parallel page.
+- If there are multiple different error, the status will display as 'multiple errors' and you will need to go to the specific inverter to see the error.
 
 # Card not loading issue
 
-With this card, there has been multiple isntances of the card not loading. From my exoeience, the best way to fix this is to clear the cache and it should load. I can give instructions for both Android mobile devices and the browser.
+With this card, there has been multiple instances of the card not loading. From my experience, the best way to fix this is to clear the cache and it should load. I can give instructions for both Android mobile devices and the browser.
 
 ### Android
 
 1. Find *Home Assistant* in the list of apps in settings.
 2. This step may differ depending on the Android device. Find anything that indicates data used or storage.
-3. When there, find the option to clear all the data (cache and storage). Clearning this will log you out of the app and you'll need to log in again.
+3. When there, find the option to clear all the data (cache and storage). Clearing this will log you out of the app and you'll need to log in again.
 4. Card should then show up. If it doesn't, please log a bug.
 
 ### Web browser
