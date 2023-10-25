@@ -1,7 +1,6 @@
 # LuxPower Distribution Card
 
-<!-- [![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=flat-square)](https://github.com/hacs/integration) -->
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
+[![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=flat-square)](https://github.com/hacs/integration)
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/DanteWinters/lux-power-distribution-card?style=flat-square)
 ![Github stars](https://img.shields.io/github/stars/DanteWinters/lux-power-distribution-card?style=flat-square)
 ![Github issues](https://img.shields.io/github/issues/DanteWinters/lux-power-distribution-card?style=flat-square)
@@ -10,32 +9,21 @@ A simple power distribution card of an inverter and battery system, for [Home As
 
 <img src="https://raw.githubusercontent.com/DanteWinters/lux-power-distribution-card/main/docs/images/full-card-allocated-power.png" width="450" />
 
-# Installation
+## Installation
 
-## HACS
+### HACS
 
-There is a PR to add this card to the HACS defaults, but for now this card can be added by adding the URL as a custom repository source in HACS:
+This card has been added to the list of default HACS frontend elements. Search for the name on HACS, and download from there to install.
 
-```
-DanteWinters/lux-power-distribution-card
-```
+## Adding the card to the dashboard
 
-## Manual install
+### Configuration
 
-1. Download  the four JavaScript files (`lux-power-distribution-card.js`, `config-entity-functions.js`, `html-functions.js` and `constants.js`) from the [latest release](https://github.com/DanteWinters/lux-power-distribution-card/releases/latest) and copy it into your `config/www` directory.
-
-2. Add the resource reference:
-   1. Visit the Resources page in your Home Assistant instance [![Open your Home Assistant instance and show your dashboard resources.](https://my.home-assistant.io/badges/lovelace_resources.svg)](https://my.home-assistant.io/redirect/lovelace_resources/)
-   2. Add `lux-power-distribution-card.js` as a JavaScript Module.
-
-# Adding the card to the dashboard
-
-## Configuration
 The following is a list of configs for the card:
 
 **NOTE:** Please refer to the example config below for clarification on how the entities should be added.
 
-### Required configurations
+#### Required configurations
 
 | Name | Type | Description |
 |---|:---:|---|
@@ -45,7 +33,7 @@ The following is a list of configs for the card:
 | home_consumption | entities | Output power of the inverter to your home. |
 | grid_flow | entities | Power flowing to and from grid. Negative flow is import from grid, and positive flow is export to grid. |
 
-### Optional configurations
+#### Optional configurations
 
 | Name | Type | Description |
 |---|---|---|
@@ -60,7 +48,7 @@ The following is a list of configs for the card:
 | inverter_alias | list of strings | This is used when there is more than 1 inverter. This will be the names used in the dropdown list. This or the lux dongle list is required. |
 | refresh_button | string | The location of the refresh button. Can be 'left', 'right' or 'both'. See below for more information. **NOTE:** the refresh button will only show if the *lux_dongle* is added. |
 
-### Sub-configs that are not a list of entities or values
+#### Sub-configs that are not a list of entities or values
 
 | Parent | Name | Type | Description |
 |---|---|---|---|
@@ -71,13 +59,9 @@ The following is a list of configs for the card:
 | parallel | average_voltage | bool | When using multiple inverters, there is a default created item on the list of inverters called "Parallel" that averages all the values from the different inverters. If *average_voltage* is true, the battery and grid voltages will be averaged and shown on the Parallel setting. Otherwise it will not show the voltages there. |
 | parallel | parallel_first | bool | When using multiple inverters, there is a default created item on the list of inverters called "Parallel" that averages all the values from the different inverters. If *parallel_first* is true, the "Parallel" option will be shown first of the list, otherwise it will be last. |
 
-# LuxpowerTek integration
+### Example Configuration
 
-The LuxpowerTek integration is hosted in a private repository by [Guy Wells](https://github.com/guybw)
-
-## Configuration
-
-If you have the Luxpower integration, you can use the following code directly (except for the energy_allocations, and change the dongle number):
+If you have the LuxpowerTek integration, you can use the following code directly (except for the energy_allocations, and change the dongle number):
 
  ```yaml
 type: custom:lux-power-distribution-card
@@ -132,6 +116,10 @@ energy_allocations:
     - sensor.power_plug_4
 ```
 
+## LuxpowerTek integration
+
+The LuxpowerTek integration is hosted in a private repository by [Guy Wells](https://github.com/guybw).
+
 ## Refresh and the Dongle serial number
 
 This refresh only works for the LuxPowerTek integration referenced above. The service name and function call format are hard-coded.
@@ -143,11 +131,11 @@ The location of the refresh button can be set with the *refresh_button_location*
 - both (Displayed on both sides, as described on the above two points.)
 - none (Removes the refresh button.)
 
-# Energy Allocations Entities
+## Energy Allocations Entities
 
 The *energy_allocations* entities can be any entity that measures power. It will sum the values together and display on the card. The idea is to use this to track how much of the home's power usage is known.
 
-# Grid indicators
+## Grid indicators
 
 Below are 2 pictures of the grid image. The first is the grid in a normal state, and the second is the grid image with both indicators active.
 
@@ -155,13 +143,13 @@ Below are 2 pictures of the grid image. The first is the grid in a normal state,
 |---|---|
 | <img src="https://raw.githubusercontent.com/DanteWinters/lux-power-distribution-card/main/docs/images/grid-normal.png" /> | <img src="https://raw.githubusercontent.com/DanteWinters/lux-power-distribution-card/main/docs/images/grid-no-ac.png" /> |
 
-# Gallery
+## Gallery
 
 | The card with only required entities | The card with all required and optional entities | The card using all the LuxPower integration options and entities |
 |---|---|---|
 | <img src="https://raw.githubusercontent.com/DanteWinters/lux-power-distribution-card/main/docs/images/base-card.png" /> | <img src="https://raw.githubusercontent.com/DanteWinters/lux-power-distribution-card/main/docs/images/base-card-with-extras.png" /> | <img src="https://raw.githubusercontent.com/DanteWinters/lux-power-distribution-card/main/docs/images/full-card.png" /> |
 
-# Interactive Card
+## Interactive Card
 
 The four entity images on the card can be clicked to display the history of the connected entity.
 
@@ -170,7 +158,7 @@ The four entity images on the card can be clicked to display the history of the 
 - Home Image: Home consumption entity's history.
 - Grid Image: Grid flow entity's history.
 
-# Parallel inverters
+## Parallel inverters
 
 With v1.0.0, support for parallel inverters have arrived! In order to use parallel inverters, simply indicate the number of inverters you are using in the config, and add the additional inverter's entities under their corresponding headers. Take note of the *inverter_alias* and *lux_dongle* config values when using parallel inverters.
 
@@ -181,25 +169,27 @@ The status bar for the parallel inverters works as follows:
 - If all the inverters have the same error (i.e. 'no-grid'), it will display this error on the parallel page.
 - If there are multiple different error, the status will display as 'multiple errors' and you will need to go to the specific inverter to see the error.
 
-# Card not loading issue
+## Known issues
+
+### Card not loading issue
 
 With this card, there has been multiple instances of the card not loading. From my experience, the best way to fix this is to clear the cache and it should load. I can give instructions for both Android mobile devices and the browser.
 
-### Android
+#### Android
 
 1. Find *Home Assistant* in the list of apps in settings.
 2. This step may differ depending on the Android device. Find anything that indicates data used or storage.
 3. When there, find the option to clear all the data (cache and storage). Clearing this will log you out of the app and you'll need to log in again.
 4. Card should then show up. If it doesn't, please log a bug.
 
-### Web browser
+#### Web browser
 
 1. With the page open, open the developer console on the browser. Usually it's *F12*.
 2. Click on the refresh button.
 3. Rick-click on the refresh button to open a menu.
 4. Choose the option *Empty Cache and Hard Reload*, or the option closest to this description.
 
-# Developer's note
+## Developer's note
 
 Although the card is functional and even has a few nice features, the development of it was done with a lot of inexperience. From my side, I do not have JavaScript or HTML experience other than this card. For this reason, there may be many ways I implemented things that aren't optimal or safe. If you are knowledgeable in and willing to look through the code, and advice and help will be much appreciated.
 
