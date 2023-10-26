@@ -16,16 +16,8 @@ class LuxPowerDistributionCard extends HTMLElement {
   }
 
   setConfig(config) {
-    if (!this.old_config) {
-      this.old_config = cef.buildConfig(config);
-    }
     this.config = cef.buildConfig(config);
-    if (this.old_config != this.config) {
-      this.old_config = this.config;
-      this.createCard();
-    }
-
-    // console.log(this.config);
+    this.createCard();
   }
 
   createCard() {
