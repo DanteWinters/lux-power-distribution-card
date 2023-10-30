@@ -164,7 +164,7 @@ export function getEntity(config, hass, config_entity, index) {
     }
   }
 
-  if (typeof entityConfig.consumption === "string" && typeof entityConfig.production === "string") {
+  if (entityConfig && typeof entityConfig.consumption === "string" && typeof entityConfig.production === "string") {
     const consumptionValue = parseInt(getEntitiesStateValue(hass.states[entityConfig.consumption]));
     const productionValue = parseInt(getEntitiesStateValue(hass.states[entityConfig.production]));
 
@@ -188,7 +188,7 @@ export function getEntitiesState(config, hass, config_entity, index) {
   let value = getEntitiesStateValue(entity);
 
   const entityConfig = config[config_entity].entities[index];
-  if (typeof entityConfig !== "string" && typeof entityConfig.consumption === "string" && typeof entityConfig.production === "string") {
+  if (entityConfig && typeof entityConfig !== "string" && typeof entityConfig.consumption === "string" && typeof entityConfig.production === "string") {
     const consumptionValue = parseInt(getEntitiesStateValue(hass.states[entityConfig.consumption]));
     const productionValue = parseInt(getEntitiesStateValue(hass.states[entityConfig.production]));
 
@@ -201,7 +201,7 @@ export function getEntitiesState(config, hass, config_entity, index) {
 }
 
 function getEntitiesStateValue(entity) {
-  if (entity.state) {
+  if (entity && entity.state) {
     if (entity.state === "unavailable" || entity.state === "unknown") {
       return "-";
     } else {
