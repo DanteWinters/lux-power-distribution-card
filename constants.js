@@ -70,7 +70,7 @@ export const base_config = {
 };
 
 export function getBatteryImage(battery_soc) {
-  if (battery_soc == 100) {
+  if (battery_soc >= 99) {
     return getBase64Data("battery-5");
   } else if (battery_soc >= 80) {
     return getBase64Data("battery-4");
