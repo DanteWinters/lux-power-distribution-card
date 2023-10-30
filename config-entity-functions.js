@@ -3,6 +3,8 @@ import * as constants from "./constants.js";
 export function buildConfig(config) {
   let new_config = constants.base_config;
 
+  new_config.title = config.title;
+
   // Check inverter count
   let inverter_count = parseInt(config.inverter_count);
   if (isNaN(inverter_count) || inverter_count <= 0) {

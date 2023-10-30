@@ -1,5 +1,6 @@
 export const base_config = {
   inverter_count: null,
+  title: null,
   parallel: {
     average_voltage: false,
     parallel_first: true,

@@ -197,14 +197,12 @@ export function generateStyles(config) {
 }
 
 export const card_base = `
-  <ha-card>
-    <div id="taskbar-grid" class="status-grid">
-    </div>
-    <div id="card-grid" class="diagram-grid">
-    </div>
-    <div id="datetime-info" class="update-time">
-    </div>
-  </ha-card>
+  <div id="taskbar-grid" class="status-grid">
+  </div>
+  <div id="card-grid" class="diagram-grid">
+  </div>
+  <div id="datetime-info" class="update-time">
+  </div>
 `;
 
 export function generateStatus(config) {

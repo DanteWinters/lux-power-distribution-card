@@ -24,8 +24,6 @@ class LuxPowerDistributionCard extends HTMLElement {
       this.old_config = this.config;
       this.createCard();
     }
-
-    // console.log(this.config);
   }
 
   createCard() {
@@ -34,11 +32,17 @@ class LuxPowerDistributionCard extends HTMLElement {
     }
 
     this.card = document.createElement("ha-card");
-    if (this.config.header) {
-      this.card.header = this.config.header;
+    this.card.classList.add('type-custom-lux-power-distribution-card');
+
+    if (this.config.title) {
+      const header = document.createElement("h1");
+      header.classList.add('card-header');
+      header.appendChild(document.createTextNode(this.config.title));
+      this.card.appendChild(header);
     }
 
     const content = document.createElement("div");
+    content.classList.add('card-content')
     this.card.appendChild(content);
 
     this.styles = document.createElement("style");
