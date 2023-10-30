@@ -154,21 +154,79 @@ function importConfigValues(config, new_config, inverter_count, object_name) {
   }
 }
 
-export function getEntitiesState(config, hass, config_entity, index) {
-  const entity_name = config[config_entity].entities[index];
-  try {
-    const entity = hass.states[entity_name];
-    if (entity.state) {
-      if (entity.state === "unavailable" || entity.state === "unknown") {
-        return "-";
-      } else {
-        return entity.state;
+export function getEntity(config, hass, config_entity, index) {
+  const entityConfig = config[config_entity].entities[index];
+  if (typeof entityConfig === "string") {
+    try {
+      return hass.states[entityConfig];
+    } catch (error) {
+      throw new Error(`Invalid entity: ${entityConfig}`);
+    }
+  }
+
+  if (typeof entityConfig.consumption === "string" && typeof entityConfig.production === "string") {
+    const consumptionValue = parseInt(getEntitiesStateValue(hass.states[entityConfig.consumption]));
+    const productionValue = parseInt(getEntitiesStateValue(hass.states[entityConfig.production]));
+
+    if (typeof consumptionValue === "number" && consumptionValue > 0) {3
+      try {
+        return hass.states[entityConfig.consumption];
+      } catch (error) {
+        throw new Error(`Invalid entity: ${entityConfig.consumption}`);
       }
     }
-    return "-";
-  } catch (error) {
-    throw new Error(`Invalid entity: ${entity_name}`);
+    try {
+      return hass.states[entityConfig.production];
+    } catch (error) {
+      throw new Error(`Invalid entity: ${entityConfig.production}`);
+    }
   }
+}
+
+export function getEntitiesState(config, hass, config_entity, index) {
+  const entity = getEntity(config, hass, config_entity, index);
+  let value = getEntitiesStateValue(entity);
+
+  const entityConfig = config[config_entity].entities[index];
+  if (typeof entityConfig !== "string" && typeof entityConfig.consumption === "string" && typeof entityConfig.production === "string") {
+    const consumptionValue = parseInt(getEntitiesStateValue(hass.states[entityConfig.consumption]));
+    const productionValue = parseInt(getEntitiesStateValue(hass.states[entityConfig.production]));
+
+    if (typeof consumptionValue === "number" && consumptionValue > 0) {
+      value *= -1;
+    }
+  }
+
+  return value;
+}
+
+function getEntitiesStateValue(entity) {
+  if (entity.state) {
+    if (entity.state === "unavailable" || entity.state === "unknown") {
+      return "-";
+    } else {
+      return entity.state;
+    }
+  }
+  return "-";
+}
+
+export function getEntitiesNumState(config, hass, config_entity, index, is_int = true, is_avg = false) {
+  let value = 0;
+  if (index == -1) {
+    for (let i = 0; i < config.inverter_count; i++) {
+      value += parseFloat(getEntitiesState(config, hass, config_entity, i));
+    }
+    if (is_avg) {
+      value = value / config.inverter_count;
+    }
+  } else {
+    value = parseFloat(getEntitiesState(config, hass, config_entity, index));
+  }
+  if (is_int) {
+    return parseInt(value);
+  }
+  return Math.round(value * 100) / 100;
 }
 
 export function getEntitiesNumState(config, hass, config_entity, index, is_int = true, is_avg = false) {
@@ -190,30 +248,21 @@ export function getEntitiesNumState(config, hass, config_entity, index, is_int =
 }
 
 export function getEntitiesAttribute(config, hass, config_entity, attribute_name, index) {
-  const entity_name = config[config_entity].entities[index];
-  try {
-    const entity = hass.states[entity_name];
-    if (entity.attributes && entity.attributes[attribute_name]) {
-      return entity.attributes[attribute_name];
-    } else {
-      return "-";
-    }
-  } catch (error) {
-    throw new Error(`Invalid entity: ${entity_name}`);
+  const entity = getEntity(config, hass, config_entity, index);
+
+  if (entity.attributes && entity.attributes[attribute_name]) {
+    return entity.attributes[attribute_name];
+  } else {
+    return "-";
   }
 }
 
 export function getEntitiesUnit(config, hass, config_entity, index) {
-  const entity_name = config[config_entity].entities[index];
-  try {
-    const entity = hass.states[config[config_entity].entities[index]];
-    if (entity.state) {
-      if (isNaN(entity.state)) return "-";
-      else return entity.attributes.unit_of_measurement ?? "";
-    }
-    return "";
-  } catch (error) {
-    throw new Error(`Invalid entity: ${entity_name}`);
+  const entity = getEntity(config, hass, config_entity, index);
+
+  if (entity.state) {
+    if (isNaN(entity.state)) return "-";
+    else return entity.attributes.unit_of_measurement ?? "";
   }
 }
 

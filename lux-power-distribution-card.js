@@ -9,7 +9,7 @@ class LuxPowerDistributionCard extends HTMLElement {
     if (!this.card) {
       this.createCard();
       this.bindRefresh(this.card, this._hass, this.config);
-      this.bindHistoryGraph(this.card, this.config);
+      this.bindHistoryGraph(this.card, this._hass, this.config);
     }
 
     this.updateCard();
@@ -170,7 +170,7 @@ class LuxPowerDistributionCard extends HTMLElement {
     }
   }
 
-  bindHistoryGraph(card, config) {
+  bindHistoryGraph(card, hass, config) {
     const history_map = {
       "#solar-image": "pv_power",
       "#battery-image": "battery_soc",
@@ -195,13 +195,15 @@ class LuxPowerDistributionCard extends HTMLElement {
               }
             }
 
+            const entityId = cef.getEntity(config, hass, value, index).entity_id;
+
             const event = new Event("hass-more-info", {
               bubbles: true,
               cancelable: false,
               composed: true,
             });
             event.detail = {
-              entityId: config[value].entities[index],
+              entityId,
             };
             card.dispatchEvent(event);
             return event;
