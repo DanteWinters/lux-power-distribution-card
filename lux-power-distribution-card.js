@@ -272,7 +272,7 @@ class LuxPowerDistributionCard extends HTMLElement {
       msg = `Status: ${msg}`;
     }
     const status_element = this.card.querySelector("#status-cell");
-    if (status_element) {
+    if (this.config.status_codes.is_used && status_element) {
       status_element.innerHTML = msg;
     }
   }
@@ -354,8 +354,8 @@ class LuxPowerDistributionCard extends HTMLElement {
   updateGrid(index) {
     // Arrow
     const grid_arrow_element = this.card.querySelector("#grid-arrows");
+    const grid_flow = cef.getEntitiesNumState(this.config, this._hass, "grid_flow", index);
     if (grid_arrow_element) {
-      const grid_flow = cef.getEntitiesNumState(this.config, this._hass, "grid_flow", index);
       const arrow_direction = grid_flow < 0 ? "arrows-left" : grid_flow > 0 ? "arrows-right" : "arrows-none";
       if (grid_arrow_element.className != `cell arrow-cell ${arrow_direction}`) {
         grid_arrow_element.setAttribute("class", `cell arrow-cell ${arrow_direction}`);
