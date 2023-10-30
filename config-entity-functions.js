@@ -229,24 +229,6 @@ export function getEntitiesNumState(config, hass, config_entity, index, is_int =
   return Math.round(value * 100) / 100;
 }
 
-export function getEntitiesNumState(config, hass, config_entity, index, is_int = true, is_avg = false) {
-  let value = 0;
-  if (index == -1) {
-    for (let i = 0; i < config.inverter_count; i++) {
-      value += parseFloat(getEntitiesState(config, hass, config_entity, i));
-    }
-    if (is_avg) {
-      value = value / config.inverter_count;
-    }
-  } else {
-    value = parseFloat(getEntitiesState(config, hass, config_entity, index));
-  }
-  if (is_int) {
-    return parseInt(value);
-  }
-  return Math.round(value * 100) / 100;
-}
-
 export function getEntitiesAttribute(config, hass, config_entity, attribute_name, index) {
   const entity = getEntity(config, hass, config_entity, index);
 
