@@ -284,7 +284,7 @@ class LuxPowerDistributionCard extends HTMLElement {
       const arrow_direction = pv_power > 0 ? "arrows-down" : "arrows-none";
       if (solar_arrow_element.className != `cell arrow-cell ${arrow_direction}`) {
         solar_arrow_element.setAttribute("class", `cell arrow-cell ${arrow_direction}`);
-        solar_arrow_element.innerHTML = hf.generateArrows();
+        solar_arrow_element.innerHTML = hf.generateArrows(4);
       }
       // Info
       solar_info_element.innerHTML = `
@@ -311,7 +311,7 @@ class LuxPowerDistributionCard extends HTMLElement {
       if (battery_arrow_element) {
         if (battery_arrow_element.className != `cell arrow-cell ${arrow_direction}`) {
           battery_arrow_element.setAttribute("class", `cell arrow-cell ${arrow_direction}`);
-          battery_arrow_element.innerHTML = hf.generateArrows();
+          battery_arrow_element.innerHTML = hf.generateArrows(4);
         }
       }
       // Charge info
@@ -351,16 +351,13 @@ class LuxPowerDistributionCard extends HTMLElement {
 
   updateGrid(index) {
     // Arrow
-    const grid_arrow_1_element = this.card.querySelector("#grid-arrows-1");
-    const grid_arrow_2_element = this.card.querySelector("#grid-arrows-2");
-    let grid_flow = cef.getEntitiesNumState(this.config, this._hass, "grid_flow", index);
-    if (grid_arrow_1_element && grid_arrow_2_element) {
+    const grid_arrow_element = this.card.querySelector("#grid-arrows");
+    if (grid_arrow_element) {
+      const grid_flow = cef.getEntitiesNumState(this.config, this._hass, "grid_flow", index);
       const arrow_direction = grid_flow < 0 ? "arrows-left" : grid_flow > 0 ? "arrows-right" : "arrows-none";
-      if (grid_arrow_1_element.className != `cell arrow-cell ${arrow_direction}`) {
-        grid_arrow_1_element.setAttribute("class", `cell arrow-cell ${arrow_direction}`);
-        grid_arrow_2_element.setAttribute("class", `cell arrow-cell ${arrow_direction}`);
-        grid_arrow_1_element.innerHTML = hf.generateArrows();
-        grid_arrow_2_element.innerHTML = hf.generateArrows();
+      if (grid_arrow_element.className != `cell arrow-cell ${arrow_direction}`) {
+        grid_arrow_element.setAttribute("class", `cell arrow-cell ${arrow_direction}`);
+        grid_arrow_element.innerHTML = hf.generateArrows(8);
       }
     }
     var grid_emoji = ``;
@@ -417,7 +414,7 @@ class LuxPowerDistributionCard extends HTMLElement {
       const arrow_direction = home_consumption > 0 || backup_power > 0 ? "arrows-down" : "arrows-none";
       if (home_arrow_element.className != `cell arrow-cell ${arrow_direction}`) {
         home_arrow_element.setAttribute("class", `cell arrow-cell ${arrow_direction}`);
-        home_arrow_element.innerHTML = hf.generateArrows();
+        home_arrow_element.innerHTML = hf.generateArrows(4);
       }
     }
     // Info
@@ -528,7 +525,7 @@ class LuxPowerDistributionCard extends HTMLElement {
       if (power_allocation_arrow_element) {
         if (power_allocation_arrow_element.className != `cell arrow-cell arrows-right`) {
           power_allocation_arrow_element.setAttribute("class", `cell arrow-cell arrows-right`);
-          power_allocation_arrow_element.innerHTML = hf.generateArrows();
+          power_allocation_arrow_element.innerHTML = hf.generateArrows(4);
         }
 
         const power_allocation_info_element = this.card.querySelector("#power-allocation-info");

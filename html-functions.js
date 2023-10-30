@@ -89,6 +89,9 @@ export function generateStyles(config) {
   }
   
   /* ARROWS */
+  #grid-arrows {
+    grid-column-start: span 2;
+  }
   .arrow-cell {
     margin: auto;
     display: flex;
@@ -99,6 +102,11 @@ export function generateStyles(config) {
     width: auto;
     object-fit: contain;
     position: relative;
+    margin: 10px;
+  }
+  .arrow-cell img {
+    height: 16px;
+    width: 11px
   }
   .arrows-left {
     transform: rotate(0deg);
@@ -107,27 +115,27 @@ export function generateStyles(config) {
     transform: rotate(90deg);
   }
   .arrows-right {
-    transform: rotate(180deg);
+    transform: rotate(180deg) translateY(4px);
   }
   .arrows-down {
-    transform: rotate(-90deg);
+    transform: rotate(-90deg) translateY(4px);
   }
   .arrows-none {
     opacity: 0;
   }
   
   /* ARROW ANIMATIONS*/
-  .arrow-1 img {
-    animation: arrow-animation-1 1.5s infinite;
+  .arrow-1 img, .arrow-5 img {
+    animation: arrow-animation-1 1.25s infinite;
   }
-  .arrow-2 img {
-    animation: arrow-animation-2 1.5s infinite;
+  .arrow-2 img, .arrow-6 img {
+    animation: arrow-animation-2 1.25s infinite;
   }
-  .arrow-3 img {
-    animation: arrow-animation-3 1.5s infinite;
+  .arrow-3 img, .arrow-7 img {
+    animation: arrow-animation-3 1.25s infinite;
   }
-  .arrow-4 img {
-    animation: arrow-animation-4 1.5s infinite;
+  .arrow-4 img, .arrow-8 img {
+    animation: arrow-animation-4 1.25s infinite;
   }
   @keyframes arrow-animation-1 {
     0%,
@@ -293,8 +301,7 @@ export function generateGrid(config) {
   cells += `<div id="battery-image" class="cell image-cell"><img src="${constants.getBase64Data("battery-0")}"></div>`; // Battery image
   cells += `<div id="battery-arrows" class="cell arrow-cell"></div>`; // Battery arrows
   cells += `<div id="inverter-image" class="cell image-cell"><img src="${constants.getBase64Data("inverter")}"></div>`; // Inverter image
-  cells += `<div id="grid-arrows-1" class="cell arrow-cell"></div>`; // Grid arrows 1
-  cells += `<div id="grid-arrows-2" class="cell arrow-cell"></div>`; // Grid arrows 2
+  cells += `<div id="grid-arrows" class="cell arrow-cell"></div>`; // Grid arrows
   cells += `<div id="grid-image" class="cell image-cell"><img src="${constants.getBase64Data("grid")}"></div>`; // Grid image
 
   // Row 3
@@ -343,9 +350,9 @@ export function generateDateTime(config) {
   return date_time_info;
 }
 
-export function generateArrows() {
+export function generateArrows(num) {
   var inner_html = ``;
-  for (let i = 1; i < 5; i++) {
+  for (let i = 1; i <= num; i++) {
     inner_html += `<div class="arrow-${i}"><img src="${constants.getBase64Data("arrow")}"></div>`;
   }
   return inner_html;
