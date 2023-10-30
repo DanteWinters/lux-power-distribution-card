@@ -9,7 +9,7 @@ class LuxPowerDistributionCard extends HTMLElement {
     if (!this.card) {
       this.createCard();
       this.bindRefresh(this.card, this._hass, this.config);
-      this.bindHistoryGraph(this.card, this.config);
+      this.bindHistoryGraph(this.card, this._hass, this.config);
     }
 
     this.updateCard();
@@ -24,8 +24,6 @@ class LuxPowerDistributionCard extends HTMLElement {
       this.old_config = this.config;
       this.createCard();
     }
-
-    // console.log(this.config);
   }
 
   createCard() {
@@ -34,11 +32,17 @@ class LuxPowerDistributionCard extends HTMLElement {
     }
 
     this.card = document.createElement("ha-card");
-    if (this.config.header) {
-      this.card.header = this.config.header;
+    this.card.classList.add('type-custom-lux-power-distribution-card');
+
+    if (this.config.title) {
+      const header = document.createElement("h1");
+      header.classList.add('card-header');
+      header.appendChild(document.createTextNode(this.config.title));
+      this.card.appendChild(header);
     }
 
     const content = document.createElement("div");
+    content.classList.add('card-content')
     this.card.appendChild(content);
 
     this.styles = document.createElement("style");
@@ -166,7 +170,7 @@ class LuxPowerDistributionCard extends HTMLElement {
     }
   }
 
-  bindHistoryGraph(card, config) {
+  bindHistoryGraph(card, hass, config) {
     const history_map = {
       "#solar-image": "pv_power",
       "#battery-image": "battery_soc",
@@ -191,13 +195,15 @@ class LuxPowerDistributionCard extends HTMLElement {
               }
             }
 
+            const entityId = cef.getEntity(config, hass, value, index).entity_id;
+
             const event = new Event("hass-more-info", {
               bubbles: true,
               cancelable: false,
               composed: true,
             });
             event.detail = {
-              entityId: config[value].entities[index],
+              entityId,
             };
             card.dispatchEvent(event);
             return event;
@@ -266,7 +272,7 @@ class LuxPowerDistributionCard extends HTMLElement {
       msg = `Status: ${msg}`;
     }
     const status_element = this.card.querySelector("#status-cell");
-    if (status_element) {
+    if (this.config.status_codes.is_used && status_element) {
       status_element.innerHTML = msg;
     }
   }
@@ -280,13 +286,13 @@ class LuxPowerDistributionCard extends HTMLElement {
       const arrow_direction = pv_power > 0 ? "arrows-down" : "arrows-none";
       if (solar_arrow_element.className != `cell arrow-cell ${arrow_direction}`) {
         solar_arrow_element.setAttribute("class", `cell arrow-cell ${arrow_direction}`);
-        solar_arrow_element.innerHTML = hf.generateArrows();
+        solar_arrow_element.innerHTML = hf.generateArrows(4);
       }
       // Info
       solar_info_element.innerHTML = `
         <div>
           <p class="header-text">${this.formatPowerStates("pv_power", pv_power, index)}</p>
-          <p class="sub-text">${pv_power > 0 ? "Solar Import" : ""}</p>
+          <p class="sub-text">${pv_power > 0 ? "PV Power" : ""}</p>
         </div>
       `;
     }
@@ -307,7 +313,7 @@ class LuxPowerDistributionCard extends HTMLElement {
       if (battery_arrow_element) {
         if (battery_arrow_element.className != `cell arrow-cell ${arrow_direction}`) {
           battery_arrow_element.setAttribute("class", `cell arrow-cell ${arrow_direction}`);
-          battery_arrow_element.innerHTML = hf.generateArrows();
+          battery_arrow_element.innerHTML = hf.generateArrows(4);
         }
       }
       // Charge info
@@ -316,7 +322,7 @@ class LuxPowerDistributionCard extends HTMLElement {
         <div>
           <p class="header-text">${this.formatPowerStates("battery_flow", battery_flow, index)}</p>
           <p class="sub-text">${
-            battery_flow > 0 ? "Battery Charging" : battery_flow < 0 ? "Battery Discharging" : "Idle"
+            battery_flow > 0 ? "Charging" : battery_flow < 0 ? "Discharging" : "Idle"
           }</p>
         </div>
       `;
@@ -338,8 +344,8 @@ class LuxPowerDistributionCard extends HTMLElement {
     if (battery_soc_info_element) {
       battery_soc_info_element.innerHTML = `
         <div>
-          <p class="header-text">${battery_soc}%</p>
           <p class="header-text">${battery_voltage}</p>
+          <p class="header-text">${battery_soc}%</p>
         </div>
     `;
     }
@@ -347,16 +353,13 @@ class LuxPowerDistributionCard extends HTMLElement {
 
   updateGrid(index) {
     // Arrow
-    const grid_arrow_1_element = this.card.querySelector("#grid-arrows-1");
-    const grid_arrow_2_element = this.card.querySelector("#grid-arrows-2");
-    let grid_flow = cef.getEntitiesNumState(this.config, this._hass, "grid_flow", index);
-    if (grid_arrow_1_element && grid_arrow_2_element) {
+    const grid_arrow_element = this.card.querySelector("#grid-arrows");
+    const grid_flow = cef.getEntitiesNumState(this.config, this._hass, "grid_flow", index);
+    if (grid_arrow_element) {
       const arrow_direction = grid_flow < 0 ? "arrows-left" : grid_flow > 0 ? "arrows-right" : "arrows-none";
-      if (grid_arrow_1_element.className != `cell arrow-cell ${arrow_direction}`) {
-        grid_arrow_1_element.setAttribute("class", `cell arrow-cell ${arrow_direction}`);
-        grid_arrow_2_element.setAttribute("class", `cell arrow-cell ${arrow_direction}`);
-        grid_arrow_1_element.innerHTML = hf.generateArrows();
-        grid_arrow_2_element.innerHTML = hf.generateArrows();
+      if (grid_arrow_element.className != `cell arrow-cell ${arrow_direction}`) {
+        grid_arrow_element.setAttribute("class", `cell arrow-cell ${arrow_direction}`);
+        grid_arrow_element.innerHTML = hf.generateArrows(8);
       }
     }
     var grid_emoji = ``;
@@ -413,13 +416,13 @@ class LuxPowerDistributionCard extends HTMLElement {
       const arrow_direction = home_consumption > 0 || backup_power > 0 ? "arrows-down" : "arrows-none";
       if (home_arrow_element.className != `cell arrow-cell ${arrow_direction}`) {
         home_arrow_element.setAttribute("class", `cell arrow-cell ${arrow_direction}`);
-        home_arrow_element.innerHTML = hf.generateArrows();
+        home_arrow_element.innerHTML = hf.generateArrows(4);
       }
     }
     // Info
     const home_info_element = this.card.querySelector("#home-info");
     if (home_info_element) {
-      var sub_text = "Home Usage";
+      var sub_text = "Consumption";
       var value = this.formatPowerStates("home_consumption", home_consumption, index);
 
       if (this.config.backup_power.is_used && home_consumption == 0 && backup_power > 0) {
@@ -429,8 +432,8 @@ class LuxPowerDistributionCard extends HTMLElement {
 
       home_info_element.innerHTML = `
         <div>
-          <p class="sub-text">${sub_text}</p>
           <p class="header-text">${value}</p>
+          <p class="sub-text">${sub_text}</p>
         </div>
       `;
     }
@@ -524,7 +527,7 @@ class LuxPowerDistributionCard extends HTMLElement {
       if (power_allocation_arrow_element) {
         if (power_allocation_arrow_element.className != `cell arrow-cell arrows-right`) {
           power_allocation_arrow_element.setAttribute("class", `cell arrow-cell arrows-right`);
-          power_allocation_arrow_element.innerHTML = hf.generateArrows();
+          power_allocation_arrow_element.innerHTML = hf.generateArrows(4);
         }
 
         const power_allocation_info_element = this.card.querySelector("#power-allocation-info");
