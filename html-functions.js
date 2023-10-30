@@ -28,6 +28,36 @@ export function generateStyles(config) {
     max-width: 100%;
     max-height: 100%;
   }
+
+  #solar-info {
+    grid-column-start: span 2;
+  }
+  #solar-info p {
+    display: block;
+  }
+
+  #battery-image {
+    display: flex;
+  }
+
+  #battery-image img {
+    height: 50px;
+  }
+
+  #battery-charge-info {
+    align-items: flex-end;
+    padding-bottom: 0.5em;
+  }
+
+  #battery-soc-info {
+    padding-top: 0.5em;
+  }
+
+  #home-info {
+    align-items: center;
+    padding-left: 0.5em;
+    grid-column-start: span 2;
+  }
   
   /* CELLS */
   .cell {
@@ -53,8 +83,7 @@ export function generateStyles(config) {
     text-align: right;
     } */
   .header-text {
-    font-size: min(4vw, 1.17em);
-    font-weight: bold;
+    font-size: min(4vw, 1em);
     line-height: 1;
     margin: 0;
     padding-left: 3px;
@@ -64,6 +93,7 @@ export function generateStyles(config) {
   }
   .sub-text {
     font-size: min(2.5vw, 0.95em);
+    color: var(--secondary-text-color);
     line-height: 1;
     margin: 0;
     padding-left: 3px;
@@ -79,7 +109,7 @@ export function generateStyles(config) {
     align-items: center;
     text-align: center;
     justify-content: center;
-    width: auto;
+    width: 70%;
     object-fit: contain;
     position: relative;
   }
@@ -279,7 +309,6 @@ export function generateGrid(config) {
     cells += `<div id="solar-image" class="cell image-cell"><img src="${constants.getBase64Data("solar")}"></div>`; // Solar image
     cells += `<div id="solar-info" class="cell text-cell"></div>`; // Solar info
     cells += `<div class="cell"></div>`;
-    cells += `<div class="cell"></div>`;
     // Row 1
     cells += `<div id="battery-charge-info" class="cell text-cell"></div>`; // Battery charge/discharge info
     cells += `<div class="cell"></div>`;
@@ -316,8 +345,8 @@ export function generateGrid(config) {
   if (config.energy_allocations.is_used) {
     // Power Allocations
     cells += `<div class="cell">${refresh_button_left}</div>`;
-    cells += `<div id="home-info" class="cell text-cell"></div>`; // Home info
     cells += `<div id="home-image" class="cell image-cell"><img src="${constants.getBase64Data("home-normal")}"></div>`; // Home image
+    cells += `<div id="home-info" class="cell text-cell"></div>`; // Home info
     cells += `<div id="power-allocation-arrows" class="cell arrow-cell"></div>`; // Power allocation arrows
     cells += `<div id="power-allocation-image" class="cell image-cell"><img src="${constants.getBase64Data(
       "home-normal"
@@ -325,10 +354,9 @@ export function generateGrid(config) {
     cells += `<div id="power-allocation-info" class="cell text-cell"></div>`; // Power allocation info
   } else {
     cells += `<div class="cell">${refresh_button_left}</div>`;
-    cells += `<div id="home-info" class="cell text-cell"></div>`; // Home info
+    cells += `<div class="cell"></div>`;
     cells += `<div id="home-image" class="cell image-cell"><img src="${constants.getBase64Data("home-normal")}"></div>`; // Home image
-    cells += `<div class="cell"></div>`;
-    cells += `<div class="cell"></div>`;
+    cells += `<div id="home-info" class="cell text-cell"></div>`; // Home info
     cells += `<div class="cell"></div>`;
   }
 

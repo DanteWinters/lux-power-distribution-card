@@ -290,7 +290,7 @@ class LuxPowerDistributionCard extends HTMLElement {
       solar_info_element.innerHTML = `
         <div>
           <p class="header-text">${this.formatPowerStates("pv_power", pv_power, index)}</p>
-          <p class="sub-text">${pv_power > 0 ? "Solar Import" : ""}</p>
+          <p class="sub-text">${pv_power > 0 ? "PV Power" : ""}</p>
         </div>
       `;
     }
@@ -320,7 +320,7 @@ class LuxPowerDistributionCard extends HTMLElement {
         <div>
           <p class="header-text">${this.formatPowerStates("battery_flow", battery_flow, index)}</p>
           <p class="sub-text">${
-            battery_flow > 0 ? "Battery Charging" : battery_flow < 0 ? "Battery Discharging" : "Idle"
+            battery_flow > 0 ? "Charging" : battery_flow < 0 ? "Discharging" : "Idle"
           }</p>
         </div>
       `;
@@ -342,8 +342,8 @@ class LuxPowerDistributionCard extends HTMLElement {
     if (battery_soc_info_element) {
       battery_soc_info_element.innerHTML = `
         <div>
-          <p class="header-text">${battery_soc}%</p>
           <p class="header-text">${battery_voltage}</p>
+          <p class="header-text">${battery_soc}%</p>
         </div>
     `;
     }
@@ -420,7 +420,7 @@ class LuxPowerDistributionCard extends HTMLElement {
     // Info
     const home_info_element = this.card.querySelector("#home-info");
     if (home_info_element) {
-      var sub_text = "Home Usage";
+      var sub_text = "Consumption";
       var value = this.formatPowerStates("home_consumption", home_consumption, index);
 
       if (this.config.backup_power.is_used && home_consumption == 0 && backup_power > 0) {
@@ -430,8 +430,8 @@ class LuxPowerDistributionCard extends HTMLElement {
 
       home_info_element.innerHTML = `
         <div>
-          <p class="sub-text">${sub_text}</p>
           <p class="header-text">${value}</p>
+          <p class="sub-text">${sub_text}</p>
         </div>
       `;
     }
