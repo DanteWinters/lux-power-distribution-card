@@ -1,7 +1,32 @@
 import * as constants from "./constants.js";
 
+const required_entries = [
+  "inverter_count",
+  "battery_soc",
+  "battery_flow",
+  "home_consumption",
+  "grid_flow"
+]
+
 export function buildConfig(config) {
-  let new_config = constants.base_config;
+  function deepcopy(value) {
+    if (!(!!value && typeof value == 'object')) {
+      return value;
+    }
+    if (Object.prototype.toString.call(value) == '[object Date]') {
+      return new Date(value.getTime());
+    }
+    if (Array.isArray(value)) {
+      return value.map(deepcopy);
+    }
+    const result = {};
+    Object.keys(value).forEach(
+      function(key) { result[key] = deepcopy(value[key]); });
+    return result;
+  }
+
+  config = deepcopy(config);
+  const new_config = deepcopy(constants.base_config)
 
   // Check inverter count
   let inverter_count = parseInt(config.inverter_count);
@@ -165,7 +190,7 @@ export function getEntitiesState(config, hass, config_entity, index) {
     }
     return "-";
   } catch (error) {
-    throw new Error(`Invalid entity: ${entity_name}`);
+    handleEntityError(entity_name, config_entity);
   }
 }
 
@@ -197,7 +222,7 @@ export function getEntitiesAttribute(config, hass, config_entity, attribute_name
       return "-";
     }
   } catch (error) {
-    throw new Error(`Invalid entity: ${entity_name}`);
+    handleEntityError(entity_name, config_entity);
   }
 }
 
@@ -211,7 +236,13 @@ export function getEntitiesUnit(config, hass, config_entity, index) {
     }
     return "";
   } catch (error) {
-    throw new Error(`Invalid entity: ${entity_name}`);
+    handleEntityError(entity_name, config_entity);
+  }
+}
+
+const handleEntityError = (config_entry, entity_name) => {
+  if (required_entries.includes(config_entry)) {
+    throw new Error(`Invalid entity: ${entity_name} for config_entry`) ;
   }
 }
 
