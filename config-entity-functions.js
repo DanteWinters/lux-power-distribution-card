@@ -28,6 +28,8 @@ export function buildConfig(config) {
   config = deepcopy(config);
   const new_config = deepcopy(constants.base_config)
 
+  new_config.title = config.title;
+
   // Check inverter count
   let inverter_count = parseInt(config.inverter_count);
   if (isNaN(inverter_count) || inverter_count <= 0) {

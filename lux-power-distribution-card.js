@@ -32,8 +32,11 @@ class LuxPowerDistributionCard extends HTMLElement {
     const shadowRoot = this.shadowRoot;
 
     const card = document.createElement('ha-card');
-    if (!this._config.title) {
-      card.setAttribute('header', this._config.title);
+    if (this._config.title) {
+      const header = document.createElement("h1");
+      header.classList.add('card-header');
+      header.appendChild(document.createTextNode(this._config.title));
+      card.appendChild(header);
     }
 
     this.content = document.createElement('div');
