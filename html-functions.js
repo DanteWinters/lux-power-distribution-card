@@ -196,17 +196,6 @@ export function generateStyles(config) {
   `;
 }
 
-export const card_base = `
-  <ha-card>
-    <div id="taskbar-grid" class="status-grid">
-    </div>
-    <div id="card-grid" class="diagram-grid">
-    </div>
-    <div id="datetime-info" class="update-time">
-    </div>
-  </ha-card>
-`;
-
 export function generateStatus(config) {
   let text_box_full = ``;
   let status_message_full = ``;
@@ -245,9 +234,9 @@ export function generateStatus(config) {
 }
 
 export function generateGrid(config) {
-  var cells = ``;
-  var refresh_button_left = ``;
-  var refresh_button_right = ``;
+  let cells = ``;
+  let refresh_button_left = ``;
+  let refresh_button_right = ``;
 
   // Refresh button
   if (config.refresh_button.left) {
@@ -331,9 +320,9 @@ export function generateGrid(config) {
 }
 
 export function generateDateTime(config) {
-  var date_time_info = ``;
+  let date_time_info = ``;
   if (config.update_time.is_used) {
-    var date_time_info = `
+    let date_time_info = `
       <p id="time-info">Last update at: -</p>
     `;
     if (config.update_time.show_last_update) {
@@ -346,7 +335,7 @@ export function generateDateTime(config) {
 }
 
 export function generateArrows() {
-  var inner_html = ``;
+  let inner_html = ``;
   for (let i = 1; i < 5; i++) {
     inner_html += `<div class="arrow-${i}"><img src="${constants.getBase64Data("arrow")}"></div>`;
   }
