@@ -47,6 +47,7 @@ The following is a list of configs for the card:
 | lux_dongle | list of strings | This is the LuxPower inverter's dongle number. It will later on be used to call the refresh service. (This requires the LuxPowerTek integration that supports this.) This or the inverter alias list are required if there are more than 1 inverter. |
 | inverter_alias | list of strings | This is used when there is more than 1 inverter. This will be the names used in the dropdown list. This or the lux dongle list is required. |
 | refresh_button | string | The location of the refresh button. Can be 'left', 'right' or 'both'. See below for more information. **NOTE:** the refresh button will only show if the *lux_dongle* is added. |
+| title | string | A title for the card. |
 
 #### Sub-configs that are not a list of entities or values
 
