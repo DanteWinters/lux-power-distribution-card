@@ -5,7 +5,7 @@ import * as constants from "./constants.js";
 class LuxPowerDistributionCard extends HTMLElement {
   constructor() {
     super();
-    this.attachShadow({ mode: 'open' });
+    this.attachShadow({ mode: "open" });
   }
 
   set hass(hass) {
@@ -28,19 +28,18 @@ class LuxPowerDistributionCard extends HTMLElement {
     if (!this._hass || !this._config) {
       return;
     }
-
     const shadowRoot = this.shadowRoot;
 
-    this.card = document.createElement('ha-card');
+    this.card = document.createElement("ha-card");
     if (this._config.title) {
       const header = document.createElement("h1");
-      header.classList.add('card-header');
+      header.classList.add("card-header");
       header.appendChild(document.createTextNode(this._config.title));
       this.card.appendChild(header);
     }
 
-    this.content = document.createElement('div');
-    this.content.classList.add('card-content');
+    this.content = document.createElement("div");
+    this.content.classList.add("card-content");
 
     this.content.innerHTML = `
       <style>${hf.generateStyles(this._config)}</style>
@@ -80,63 +79,43 @@ class LuxPowerDistributionCard extends HTMLElement {
       this.updateHome(index);
       this.updateAllocatedPower();
       this.updateDateTime(index);
+      this.updateInverterPic(index);
     }
   }
 
   bindRefresh(card, hass, config) {
-    let refresh_button_left = card.querySelector("#refresh-button-left");
-    if (refresh_button_left) {
-      refresh_button_left.addEventListener("click", function (source) {
-        let index = 0;
-        if (config.inverter_count > 1) {
-          const inverter_selector_element = card.querySelector("#inverter-selector");
-          if (inverter_selector_element) {
-            let select_value = inverter_selector_element.value;
-            let parsed_value = parseInt(select_value);
-            if (!isNaN(parsed_value)) {
-              index = parsed_value;
+    const refresh_list = ["#refresh-button-left", "#refresh-button-right"];
+
+    for (let i = 0; i < refresh_list.length; i++) {
+      let refresh_button = card.querySelector(refresh_list[i]);
+      if (refresh_button) {
+        refresh_button.addEventListener("click", function (source) {
+          let index = 0;
+          if (config.inverter_count > 1) {
+            const inverter_selector_element = card.querySelector("#inverter-selector");
+            if (inverter_selector_element) {
+              let select_value = inverter_selector_element.value;
+              let parsed_value = parseInt(select_value);
+              if (!isNaN(parsed_value)) {
+                index = parsed_value;
+              }
             }
           }
-        }
-        if (index == this._config.inverter_count) {
-          for (let i = 0; i < this._config.inverter_count; i++) {
-            hass.callService("luxpower", "luxpower_refresh_registers", {
-              dongle: this._config.lux_dongle.values[i],
-            });
-          }
-        } else {
-          hass.callService("luxpower", "luxpower_refresh_registers", {
-            dongle: this._config.lux_dongle.values[index],
-          });
-        }
-      });
-    }
-    let refresh_button_right = card.querySelector("#refresh-button-right");
-    if (refresh_button_right) {
-      refresh_button_right.addEventListener("click", function (source) {
-        let index = 0;
-        if (config.inverter_count > 1) {
-          const inverter_selector_element = card.querySelector("#inverter-selector");
-          if (inverter_selector_element) {
-            let select_value = inverter_selector_element.value;
-            let parsed_value = parseInt(select_value);
-            if (!isNaN(parsed_value)) {
-              index = parsed_value;
+          if (index == config.inverter_count) {
+            for (let j = 0; j < config.inverter_count; j++) {
+              console.log(config.lux_dongle.values[i]);
+              hass.callService("luxpower", "luxpower_refresh_registers", {
+                dongle: config.lux_dongle.values[i],
+              });
+              console.log(config.lux_dongle.values[i]);
             }
-          }
-        }
-        if (index == this._config.inverter_count) {
-          for (let i = 0; i < this._config.inverter_count; i++) {
+          } else {
             hass.callService("luxpower", "luxpower_refresh_registers", {
-              dongle: this._config.lux_dongle.values[i],
+              dongle: config.lux_dongle.values[index],
             });
           }
-        } else {
-          hass.callService("luxpower", "luxpower_refresh_registers", {
-            dongle: this._config.lux_dongle.values[index],
-          });
-        }
-      });
+        });
+      }
     }
   }
 
@@ -171,7 +150,7 @@ class LuxPowerDistributionCard extends HTMLElement {
               composed: true,
             });
             event.detail = {
-              entityId: this._config[value].entities[index],
+              entityId: config[value].entities[index],
             };
             card.dispatchEvent(event);
             return event;
@@ -260,7 +239,7 @@ class LuxPowerDistributionCard extends HTMLElement {
       solar_info_element.innerHTML = `
         <div>
           <p class="header-text">${this.formatPowerStates("pv_power", pv_power, index)}</p>
-          <p class="sub-text">${pv_power > 0 ? "Solar Import" : ""}</p>
+          <p class="sub-text">${pv_power > 0 ? "PV Power" : ""}</p>
         </div>
       `;
     }
@@ -289,31 +268,22 @@ class LuxPowerDistributionCard extends HTMLElement {
       battery_charge_info_element.innerHTML = `
         <div>
           <p class="header-text">${this.formatPowerStates("battery_flow", battery_flow, index)}</p>
-          <p class="sub-text">${
-            battery_flow > 0 ? "Battery Charging" : battery_flow < 0 ? "Battery Discharging" : "Idle"
-          }</p>
+          <p class="sub-text">${battery_flow > 0 ? "Charge Power" : battery_flow < 0 ? "Discharge Power" : "Idle"}</p>
         </div>
       `;
     }
     var battery_voltage = "";
     if (this._config.battery_voltage.is_used && index != -1) {
       battery_voltage = `${cef.getEntitiesState(this._config, this._hass, "battery_voltage", index, false)} Vdc`;
-    } else if (this._config.parallel.average_voltage) {
-      battery_voltage = `${cef.getEntitiesNumState(
-        this._config,
-        this._hass,
-        "battery_voltage",
-        index,
-        false,
-        true
-      )} Vdc (avg)`;
+    } else if (this._config.battery_voltage.is_used && this._config.parallel.average_voltage) {
+      battery_voltage = `${cef.getEntitiesNumState(this._config, this._hass, "battery_voltage", index, false, true)} Vdc (avg)`;
     }
     const battery_soc_info_element = this.shadowRoot.querySelector("#battery-soc-info");
     if (battery_soc_info_element) {
       battery_soc_info_element.innerHTML = `
         <div>
+          ${this._config.battery_voltage.is_used ? `<p class="header-text">${battery_voltage}</p>` : ``}
           <p class="header-text">${battery_soc}%</p>
-          <p class="header-text">${battery_voltage}</p>
         </div>
     `;
     }
@@ -338,10 +308,7 @@ class LuxPowerDistributionCard extends HTMLElement {
       var grid_voltage = parseInt(cef.getEntitiesState(this._config, this._hass, "grid_voltage", index));
       const grid_image_element = this.shadowRoot.querySelector("#grid-image");
       if (this._config.grid_indicator.hue) {
-        grid_image_element.setAttribute(
-          "class",
-          grid_voltage == 0 ? `cell image-cell blend-overlay` : `cell image-cell`
-        );
+        grid_image_element.setAttribute("class", grid_voltage == 0 ? `cell image-cell blend-overlay` : `cell image-cell`);
       }
       if (this._config.grid_indicator.dot) {
         grid_emoji = grid_voltage == 0 ? ` 🔴` : ``;
@@ -356,14 +323,7 @@ class LuxPowerDistributionCard extends HTMLElement {
         if (index != -1) {
           grid_voltage = `${cef.getEntitiesState(this._config, this._hass, "grid_voltage", index)} Vac${grid_emoji}`;
         } else if (this._config.parallel.average_voltage) {
-          grid_voltage = `${cef.getEntitiesNumState(
-            this._config,
-            this._hass,
-            "grid_voltage",
-            index,
-            false,
-            true
-          )} Vac (avg)${grid_emoji}`;
+          grid_voltage = `${cef.getEntitiesNumState(this._config, this._hass, "grid_voltage", index, false, true)} Vac (avg)${grid_emoji}`;
         }
       }
       grid_info_element.innerHTML = `
@@ -403,8 +363,8 @@ class LuxPowerDistributionCard extends HTMLElement {
 
       home_info_element.innerHTML = `
         <div>
-          <p class="sub-text">${sub_text}</p>
           <p class="header-text">${value}</p>
+          <p class="sub-text">${sub_text}</p>
         </div>
       `;
     }
@@ -422,18 +382,15 @@ class LuxPowerDistributionCard extends HTMLElement {
             oldest_time = Date.parse(cef.getEntitiesState(this._config, this._hass, "update_time", i));
           }
         }
-        update_time_element.innerHTML = `${
-          this._config.inverter_alias.values[olderst_index]
-        } updated at: ${cef.getEntitiesState(this._config, this._hass, "update_time", olderst_index)}`;
+        update_time_element.innerHTML = `${this._config.inverter_alias.values[olderst_index]} updated at: ${cef.getEntitiesState(
+          this._config,
+          this._hass,
+          "update_time",
+          olderst_index
+        )}`;
         const since_time_element = this.shadowRoot.querySelector("#since-info");
         if (since_time_element) {
-          var last_time_ts = cef.getEntitiesAttribute(
-            this._config,
-            this._hass,
-            "update_time",
-            "timestamp",
-            olderst_index
-          );
+          var last_time_ts = cef.getEntitiesAttribute(this._config, this._hass, "update_time", "timestamp", olderst_index);
           var time_now = Date.now() / 1000;
           var diff = time_now - last_time_ts;
 
@@ -458,12 +415,7 @@ class LuxPowerDistributionCard extends HTMLElement {
     } else {
       const update_time_element = this.shadowRoot.querySelector("#time-info");
       if (update_time_element) {
-        update_time_element.innerHTML = `Last update at: ${cef.getEntitiesState(
-          this._config,
-          this._hass,
-          "update_time",
-          index
-        )}`;
+        update_time_element.innerHTML = `Last update at: ${cef.getEntitiesState(this._config, this._hass, "update_time", index)}`;
       }
       const since_time_element = this.shadowRoot.querySelector("#since-info");
       if (since_time_element) {
@@ -504,10 +456,21 @@ class LuxPowerDistributionCard extends HTMLElement {
         const power_allocation_info_element = this.shadowRoot.querySelector("#power-allocation-info");
         power_allocation_info_element.innerHTML = `
           <div>
+          <p class="header-text">${parseInt(this.getAllocatedPower())} W</p>
             <p class="sub-text">Allocated Power</p>
-            <p class="header-text">${parseInt(this.getAllocatedPower())} W</p>
           </div>
         `;
+      }
+    }
+  }
+
+  updateInverterPic(index) {
+    const inverter_pic_element = this.shadowRoot.querySelector("#inverter-image");
+    if (inverter_pic_element) {
+      if (index == -1) {
+        inverter_pic_element.innerHTML = `<img src="${constants.getBase64Data("parallel-inverter")}">`;
+      } else {
+        inverter_pic_element.innerHTML = `<img src="${constants.getBase64Data("inverter")}">`;
       }
     }
   }
