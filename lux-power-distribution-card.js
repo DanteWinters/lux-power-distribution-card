@@ -28,7 +28,6 @@ class LuxPowerDistributionCard extends HTMLElement {
     if (!this._hass || !this._config) {
       return;
     }
-
     const shadowRoot = this.shadowRoot;
 
     this.card = document.createElement("ha-card");
@@ -85,59 +84,38 @@ class LuxPowerDistributionCard extends HTMLElement {
   }
 
   bindRefresh(card, hass, config) {
-    let refresh_button_left = card.querySelector("#refresh-button-left");
-    if (refresh_button_left) {
-      refresh_button_left.addEventListener("click", function (source) {
-        let index = 0;
-        if (config.inverter_count > 1) {
-          const inverter_selector_element = card.querySelector("#inverter-selector");
-          if (inverter_selector_element) {
-            let select_value = inverter_selector_element.value;
-            let parsed_value = parseInt(select_value);
-            if (!isNaN(parsed_value)) {
-              index = parsed_value;
+    const refresh_list = ["#refresh-button-left", "#refresh-button-right"];
+
+    for (let i = 0; i < refresh_list.length; i++) {
+      let refresh_button = card.querySelector(refresh_list[i]);
+      if (refresh_button) {
+        refresh_button.addEventListener("click", function (source) {
+          let index = 0;
+          if (config.inverter_count > 1) {
+            const inverter_selector_element = card.querySelector("#inverter-selector");
+            if (inverter_selector_element) {
+              let select_value = inverter_selector_element.value;
+              let parsed_value = parseInt(select_value);
+              if (!isNaN(parsed_value)) {
+                index = parsed_value;
+              }
             }
           }
-        }
-        if (index == this._config.inverter_count) {
-          for (let i = 0; i < this._config.inverter_count; i++) {
-            hass.callService("luxpower", "luxpower_refresh_registers", {
-              dongle: this._config.lux_dongle.values[i],
-            });
-          }
-        } else {
-          hass.callService("luxpower", "luxpower_refresh_registers", {
-            dongle: this._config.lux_dongle.values[index],
-          });
-        }
-      });
-    }
-    let refresh_button_right = card.querySelector("#refresh-button-right");
-    if (refresh_button_right) {
-      refresh_button_right.addEventListener("click", function (source) {
-        let index = 0;
-        if (config.inverter_count > 1) {
-          const inverter_selector_element = card.querySelector("#inverter-selector");
-          if (inverter_selector_element) {
-            let select_value = inverter_selector_element.value;
-            let parsed_value = parseInt(select_value);
-            if (!isNaN(parsed_value)) {
-              index = parsed_value;
+          if (index == config.inverter_count) {
+            for (let j = 0; j < config.inverter_count; j++) {
+              console.log(config.lux_dongle.values[i]);
+              hass.callService("luxpower", "luxpower_refresh_registers", {
+                dongle: config.lux_dongle.values[i],
+              });
+              console.log(config.lux_dongle.values[i]);
             }
-          }
-        }
-        if (index == this._config.inverter_count) {
-          for (let i = 0; i < this._config.inverter_count; i++) {
+          } else {
             hass.callService("luxpower", "luxpower_refresh_registers", {
-              dongle: this._config.lux_dongle.values[i],
+              dongle: config.lux_dongle.values[index],
             });
           }
-        } else {
-          hass.callService("luxpower", "luxpower_refresh_registers", {
-            dongle: this._config.lux_dongle.values[index],
-          });
-        }
-      });
+        });
+      }
     }
   }
 
@@ -172,7 +150,7 @@ class LuxPowerDistributionCard extends HTMLElement {
               composed: true,
             });
             event.detail = {
-              entityId: this._config[value].entities[index],
+              entityId: config[value].entities[index],
             };
             card.dispatchEvent(event);
             return event;
