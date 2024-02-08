@@ -21,7 +21,7 @@ export function generateStyles(config) {
     grid-template-rows: repeat(1, 1fr);
     padding-left: 5px;
     padding-right: 5px;
-    padding-top: ${config.title ? 0 : 30}px;
+    padding-top: ${config.title ? 0 : 10}px;
   }
   .diagram-grid img {
     max-width: 100%;
@@ -118,16 +118,16 @@ export function generateStyles(config) {
   
   /* ARROW ANIMATIONS*/
   .arrow-1 img {
-    animation: arrow-animation-1 1.5s infinite;
+    animation: arrow-animation-1 1.25s infinite;
   }
   .arrow-2 img {
-    animation: arrow-animation-2 1.5s infinite;
+    animation: arrow-animation-2 1.25s infinite;
   }
   .arrow-3 img {
-    animation: arrow-animation-3 1.5s infinite;
+    animation: arrow-animation-3 1.25s infinite;
   }
   .arrow-4 img {
-    animation: arrow-animation-4 1.5s infinite;
+    animation: arrow-animation-4 1.25s infinite;
   }
   @keyframes arrow-animation-1 {
     0%,

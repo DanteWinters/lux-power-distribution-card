@@ -15,6 +15,7 @@ class LuxPowerDistributionCard extends HTMLElement {
       this.createCard();
       this.bindRefresh(this.card, this._hass, this._config);
       this.bindHistoryGraph(this.card, this._config);
+      this.bindHistoryGraphMulti(this.card, this._config);
     }
 
     this.updateCard();
@@ -120,13 +121,15 @@ class LuxPowerDistributionCard extends HTMLElement {
   }
 
   bindHistoryGraph(card, config) {
-    const history_map = {
+    var history_map = {
       "#solar-image": "pv_power",
-      "#battery-image": "battery_soc",
+      "#battery-image": "battery_flow",
+      "#battery-soc-info": "battery_soc",
       "#grid-image": "grid_flow",
-      "#home-image": "home_consumption",
     };
-
+    if (!config.backup_power.is_used) {
+      history_map["#home-image"] = "home_consumption";
+    }
     for (const [key, value] of Object.entries(history_map)) {
       if (history_map.hasOwnProperty(key)) {
         let button_element = card.querySelector(key);
@@ -156,6 +159,50 @@ class LuxPowerDistributionCard extends HTMLElement {
             return event;
           });
         }
+      }
+    }
+  }
+
+  bindHistoryGraphMulti(card, config) {
+    if (config.backup_power.is_used) {
+      let button_element = card.querySelector("#home-image");
+      if (button_element) {
+        button_element.addEventListener("click", function (source) {
+          let index = 0;
+          if (config.inverter_count > 1) {
+            const inverter_selector_element = card.querySelector("#inverter-selector");
+            if (inverter_selector_element) {
+              let select_value = inverter_selector_element.value;
+              let parsed_value = parseInt(select_value);
+              if (!isNaN(parsed_value)) {
+                index = parsed_value;
+              }
+            }
+          }
+
+          const entityIds = [config["home_consumption"].entities[index], config["backup_power"].entities[index]];
+          let currentIndex = 0;
+
+          function openNextHistoryView() {
+            if (currentIndex < entityIds.length) {
+              const entityId = entityIds[currentIndex];
+              const event = new Event("hass-more-info", {
+                bubbles: true,
+                cancelable: false,
+                composed: true,
+              });
+
+              event.detail = {
+                entityId: entityId,
+              };
+              card.dispatchEvent(event);
+              currentIndex++;
+              document.querySelector("home-assistant").addEventListener("dialog-closed", openNextHistoryView);
+            }
+          }
+
+          openNextHistoryView();
+        });
       }
     }
   }
@@ -448,8 +495,15 @@ class LuxPowerDistributionCard extends HTMLElement {
     if (this._config.energy_allocations.is_used) {
       const power_allocation_arrow_element = this.shadowRoot.querySelector("#power-allocation-arrows");
       if (power_allocation_arrow_element) {
-        if (power_allocation_arrow_element.className != `cell arrow-cell arrows-right`) {
-          power_allocation_arrow_element.setAttribute("class", `cell arrow-cell arrows-right`);
+        const allocated_power = this.getAllocatedPower();
+        var allocated_power_arrow_direction = ``;
+        if (allocated_power == 0) {
+          allocated_power_arrow_direction = `cell arrow-cell arrows-none`;
+        } else {
+          allocated_power_arrow_direction = `cell arrow-cell arrows-right`;
+        }
+        if (power_allocation_arrow_element.className != allocated_power_arrow_direction) {
+          power_allocation_arrow_element.setAttribute("class", allocated_power_arrow_direction);
           power_allocation_arrow_element.innerHTML = hf.generateArrows();
         }
 
