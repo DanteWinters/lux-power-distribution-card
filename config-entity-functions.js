@@ -47,6 +47,8 @@ export function buildConfig(config) {
     "grid_voltage",
     "update_time",
     "status_codes",
+    "generator_voltage",
+    "generator_power",
   ];
   for (let i = 0; i < config_entities.length; i++) {
     importConfigEntities(config, new_config, inverter_count, config_entities[i]);
@@ -121,8 +123,16 @@ export function buildConfig(config) {
     }
   }
 
+  // Check individual solar inputs
+  if (config.pv_power.show_individual) {
+    new_config.pv_power.show_individual = true;
+    new_config.pv_power.individuals = {}
+    for (let i = 0; i < inverter_count; i++) {
+      let key_name = `inv_${(i + 1)}_entities`;
+      new_config.pv_power.individuals[key_name] = config.pv_power[key_name]
+    }
+  }
   validateConfig(new_config);
-
   return new_config;
 }
 
@@ -207,6 +217,23 @@ export function getEntitiesNumState(config, hass, config_entity, index, is_int =
     return parseInt(value);
   }
   return Math.round(value * 100) / 100;
+}
+
+export function getIndividualPvValues(config, hass, index) {
+  const individual_values = [];
+
+  const pv_individuals = config.pv_power.individuals[`inv_${index + 1}_entities`]
+    for (let i = 0; i < pv_individuals.length; i++) {
+      const entity = hass.states[pv_individuals[i]];
+      if (entity.state) {
+        if (entity.state === "unavailable" || entity.state === "unknown") {
+          individual_values.push(`- ${entity.attributes.unit_of_measurement}`);
+        } else {
+          individual_values.push(`${entity.state} ${entity.attributes.unit_of_measurement}`);
+        }
+      }
+    }
+  return individual_values
 }
 
 export function getEntitiesAttribute(config, hass, config_entity, attribute_name, index) {

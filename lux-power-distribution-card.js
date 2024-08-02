@@ -275,20 +275,33 @@ class LuxPowerDistributionCard extends HTMLElement {
     const solar_arrow_element = this.shadowRoot.querySelector("#solar-arrows");
     const solar_info_element = this.shadowRoot.querySelector("#solar-info");
     if (solar_arrow_element && solar_info_element) {
-      let pv_power = cef.getEntitiesNumState(this._config, this._hass, "pv_power", index);
-      // Arrow
-      const arrow_direction = pv_power > 0 ? "arrows-down" : "arrows-none";
-      if (solar_arrow_element.className != `cell arrow-cell ${arrow_direction}`) {
-        solar_arrow_element.setAttribute("class", `cell arrow-cell ${arrow_direction}`);
-        solar_arrow_element.innerHTML = hf.generateArrows();
-      }
-      // Info
-      solar_info_element.innerHTML = `
-        <div>
+      if (!this._config.pv_power.show_individual || index == -1) {
+        let pv_power = cef.getEntitiesNumState(this._config, this._hass, "pv_power", index);
+        // Arrow
+        const arrow_direction = pv_power > 0 ? "arrows-down" : "arrows-none";
+        if (solar_arrow_element.className != `cell arrow-cell ${arrow_direction}`) {
+          solar_arrow_element.setAttribute("class", `cell arrow-cell ${arrow_direction}`);
+          solar_arrow_element.innerHTML = hf.generateArrows();
+        }
+        // Info
+        solar_info_element.innerHTML = `
+          <div>
           <p class="header-text">${this.formatPowerStates("pv_power", pv_power, index)}</p>
           <p class="sub-text">${pv_power > 0 ? "PV Power" : ""}</p>
-        </div>
-      `;
+          </div>
+        `;
+      } else {
+        let sol_text = "";
+        let pv_values = cef.getIndividualPvValues(this._config, this._hass, index);
+        for (let i = 0; i < pv_values.length; i++) {
+          sol_text += `<p><text class="sub-text">${i + 1}:</text> <text class="header-text">${pv_values[i]}</text></p>`;
+        }
+        solar_info_element.innerHTML = `
+          <div>
+          ${sol_text}
+          </div>
+        `;
+      }
     }
   }
 
@@ -341,8 +354,9 @@ class LuxPowerDistributionCard extends HTMLElement {
     const grid_arrow_1_element = this.shadowRoot.querySelector("#grid-arrows-1");
     const grid_arrow_2_element = this.shadowRoot.querySelector("#grid-arrows-2");
     let grid_flow = cef.getEntitiesNumState(this._config, this._hass, "grid_flow", index);
+    let gen_power = this._config.generator_power.is_used ? parseInt(cef.getEntitiesState(this._config, this._hass, "generator_power", index)) : 0;
     if (grid_arrow_1_element && grid_arrow_2_element) {
-      const arrow_direction = grid_flow < 0 ? "arrows-left" : grid_flow > 0 ? "arrows-right" : "arrows-none";
+      const arrow_direction = (grid_flow < 0 || gen_power > 0) ? "arrows-left" : (grid_flow > 0 ? "arrows-right" : "arrows-none");
       if (grid_arrow_1_element.className != `cell arrow-cell ${arrow_direction}`) {
         grid_arrow_1_element.setAttribute("class", `cell arrow-cell ${arrow_direction}`);
         grid_arrow_2_element.setAttribute("class", `cell arrow-cell ${arrow_direction}`);
@@ -355,7 +369,7 @@ class LuxPowerDistributionCard extends HTMLElement {
       var grid_voltage = parseInt(cef.getEntitiesState(this._config, this._hass, "grid_voltage", index));
       const grid_image_element = this.shadowRoot.querySelector("#grid-image");
       if (this._config.grid_indicator.hue) {
-        grid_image_element.setAttribute("class", grid_voltage == 0 ? `cell image-cell blend-overlay` : `cell image-cell`);
+        grid_image_element.setAttribute("class", (grid_voltage == 0 && gen_power == 0) ? `cell image-cell blend-overlay` : `cell image-cell`);
       }
       if (this._config.grid_indicator.dot) {
         grid_emoji = grid_voltage == 0 ? ` 🔴` : ``;
@@ -365,18 +379,35 @@ class LuxPowerDistributionCard extends HTMLElement {
     // Info
     const grid_info_element = this.shadowRoot.querySelector("#grid-info");
     if (grid_info_element) {
-      grid_voltage = ``;
+      let grid_voltage_str = ``;
       if (this._config.grid_voltage.is_used) {
         if (index != -1) {
-          grid_voltage = `${cef.getEntitiesState(this._config, this._hass, "grid_voltage", index)} Vac${grid_emoji}`;
+          grid_voltage_str = `${cef.getEntitiesState(this._config, this._hass, "grid_voltage", index)} Vac${grid_emoji}`;
         } else if (this._config.parallel.average_voltage) {
-          grid_voltage = `${cef.getEntitiesNumState(this._config, this._hass, "grid_voltage", index, false, true)} Vac (avg)${grid_emoji}`;
+          grid_voltage_str = `${cef.getEntitiesNumState(this._config, this._hass, "grid_voltage", index, false, true)} Vac (avg)${grid_emoji}`;
         }
       }
+      let grid_disp_power = this.formatPowerStates("grid_flow", grid_flow, index);
+
+      const grid_pic_element = this.shadowRoot.querySelector("#grid-image");
+      if (gen_power != 0 && grid_flow == 0) {
+        grid_disp_power = this.formatPowerStates("generator_power", grid_flow, index);
+        grid_pic_element.innerHTML = `<img src="${constants.getBase64Data("generator")}">`;
+        if ( this._config.generator_voltage.is_used) {
+          if (index != -1) {
+            grid_voltage_str = `${cef.getEntitiesState(this._config, this._hass, "generator_voltage", index)} Vac${grid_emoji}`;
+          } else if (this._config.parallel.average_voltage) {
+            grid_voltage_str = `${cef.getEntitiesNumState(this._config, this._hass, "generator_voltage", index, false, true)} Vac (avg)${grid_emoji}`;
+          }
+        }
+      } else {
+        grid_pic_element.innerHTML = `<img src="${constants.getBase64Data("grid")}">`;
+      }
+      
       grid_info_element.innerHTML = `
         <div>
-          <p class="header-text">${this.formatPowerStates("grid_flow", grid_flow, index)}</p>
-          <p class="header-text">${grid_voltage}</p>
+          <p class="header-text">${grid_disp_power}</p>
+          <p class="header-text">${grid_voltage_str}</p>
         </div>
       `;
     }
