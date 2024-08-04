@@ -71,6 +71,10 @@ export function generateStyles(config) {
     padding-top: 1.5px;
     padding-bottom: 1.5px;
   }
+  .pv-main-text {
+    font-size: min(4vw, 1em);
+    font-weight: bold;
+  }
   
   /* IMAGE CELLS */
   .image-cell img {
