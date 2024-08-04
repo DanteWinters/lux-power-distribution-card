@@ -294,7 +294,7 @@ class LuxPowerDistributionCard extends HTMLElement {
         let sol_text = "";
         let pv_values = cef.getIndividualPvValues(this._config, this._hass, index);
         for (let i = 0; i < pv_values.length; i++) {
-          sol_text += `<p><text class="sub-text">${i + 1}:</text> <text class="header-text">${pv_values[i]}</text></p>`;
+          sol_text += `<text class="pv-main-text">${pv_values[i]}</text>\n`;
         }
         solar_info_element.innerHTML = `
           <div>
