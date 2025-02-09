@@ -236,6 +236,21 @@ export function generateStatus(config) {
   `;
 }
 
+export function generateTemp(config) {
+  let temp_message = ``;
+  if (config.temp.is_used) {
+    temp_message = `Loading...`;
+  }
+
+  return `
+    <div class="cell">
+    </div>
+    <div id="temp-cell" class="cell grid-status">
+      ${temp_message}
+    </div>
+  `;
+}
+
 export function generateGrid(config) {
   let cells = ``;
   let refresh_button_left = ``;
