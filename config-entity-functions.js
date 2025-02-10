@@ -125,12 +125,14 @@ export function buildConfig(config) {
   }
 
   // Check individual solar inputs
-  if (config.pv_power.show_individual) {
-    new_config.pv_power.show_individual = true;
-    new_config.pv_power.individuals = {}
-    for (let i = 0; i < inverter_count; i++) {
-      let key_name = `inv_${(i + 1)}_entities`;
-      new_config.pv_power.individuals[key_name] = config.pv_power[key_name]
+  if (config.pv_power.is_used) {
+    if (config.pv_power.show_individual) {
+      new_config.pv_power.show_individual = true;
+      new_config.pv_power.individuals = {}
+      for (let i = 0; i < inverter_count; i++) {
+        let key_name = `inv_${(i + 1)}_entities`;
+        new_config.pv_power.individuals[key_name] = config.pv_power[key_name]
+      }
     }
   }
 
