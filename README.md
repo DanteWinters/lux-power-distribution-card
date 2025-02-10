@@ -48,6 +48,7 @@ The following is a list of configs for the card:
 | inverter_alias | list of strings | This is used when there is more than 1 inverter. This will be the names used in the dropdown list. This or the lux dongle list is required. |
 | refresh_button | string | The location of the refresh button. Can be 'left', 'right' or 'both'. See below for more information. **NOTE:** the refresh button will only show if the *lux_dongle* is added. |
 | title | string | A title for the card. |
+| temp | entities | An entity that gives the inverters temperature. The unit shown is the unit of the sensor. |
 
 #### Sub-configs that are not a list of entities or values
 
@@ -59,6 +60,7 @@ The following is a list of configs for the card:
 | status_codes | no_grid_is_warning | bool | Some status codes (64, 136 and 192) are shown when grid is not available. If this value is true, these codes will show up as a warning on the status. If the value is false, these values will show up as normal. |
 | parallel | average_voltage | bool | When using multiple inverters, there is a default created item on the list of inverters called "Parallel" that averages all the values from the different inverters. If *average_voltage* is true, the battery and grid voltages will be averaged and shown on the Parallel setting. Otherwise it will not show the voltages there. |
 | parallel | parallel_first | bool | When using multiple inverters, there is a default created item on the list of inverters called "Parallel" that averages all the values from the different inverters. If *parallel_first* is true, the "Parallel" option will be shown first of the list, otherwise it will be last. |
+| grid_flow | reverse | bool | This will multiple the grid fow value by -1 before doing calulations. This is a setting for inverter integrations that are not the LuxPower integration. |
 
 ### Example Configuration
 

@@ -49,6 +49,7 @@ export function buildConfig(config) {
     "status_codes",
     "generator_voltage",
     "generator_power",
+    "temp",
   ];
   for (let i = 0; i < config_entities.length; i++) {
     importConfigEntities(config, new_config, inverter_count, config_entities[i]);
@@ -132,6 +133,12 @@ export function buildConfig(config) {
       new_config.pv_power.individuals[key_name] = config.pv_power[key_name]
     }
   }
+
+  // Check reverse grid flow
+  if (config.grid_flow.reverse) {
+    new_config.grid_flow.reverse = config.grid_flow.reverse
+  }
+
   validateConfig(new_config);
   return new_config;
 }
