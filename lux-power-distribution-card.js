@@ -30,6 +30,10 @@ class LuxPowerDistributionCard extends HTMLElement {
     return document.createElement("lux-power-distribution-card-editor");
   }
 
+  static getStubConfig() {
+    return constants.stub_config;
+  }
+
   createCard() {
     if (!this._hass || !this._config) {
       return;
@@ -111,11 +115,9 @@ class LuxPowerDistributionCard extends HTMLElement {
           }
           if (index == config.inverter_count) {
             for (let j = 0; j < config.inverter_count; j++) {
-              console.log(config.lux_dongle.values[i]);
               hass.callService("luxpower", "luxpower_refresh_registers", {
                 dongle: config.lux_dongle.values[i],
               });
-              console.log(config.lux_dongle.values[i]);
             }
           } else {
             hass.callService("luxpower", "luxpower_refresh_registers", {
@@ -153,14 +155,13 @@ class LuxPowerDistributionCard extends HTMLElement {
                 }
               }
             }
-
             const event = new Event("hass-more-info", {
               bubbles: true,
               cancelable: false,
               composed: true,
             });
             event.detail = {
-              entityIds: config[value].entities[index],
+              entityId: config[value].entities[index],
             };
             card.dispatchEvent(event);
             return event;
@@ -619,3 +620,9 @@ class LuxPowerDistributionCard extends HTMLElement {
 }
 
 customElements.define("lux-power-distribution-card", LuxPowerDistributionCard);
+window.customCards = window.customCards || [];
+window.customCards.push({
+  type: "lux-power-distribution-card",
+  name: "Lux power-distribution card ",
+  description: "A power-distribution card that imitates the LuxPower app.",
+});

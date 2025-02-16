@@ -83,6 +83,26 @@ export const base_config = {
   }
 };
 
+export const stub_config = {
+  inverter_count: 1,
+  battery_soc: {
+    entities: [],
+  },
+  battery_flow: {
+    entities: [],
+  },
+  home_consumption: {
+    entities: [],
+  },
+  grid_flow: {
+    entities: [],
+    reverse: false,
+  },
+  lux_dongle: {
+    values: [],
+  }
+};
+
 export function getBatteryImage(battery_soc) {
   if (battery_soc == 100) {
     return getBase64Data("battery-5");
