@@ -370,14 +370,138 @@ class LuxPowerDistributionCard extends HTMLElement {
     }
     const battery_soc_info_element = this.shadowRoot.querySelector("#battery-soc-info");
     if (battery_soc_info_element) {
-      battery_soc_info_element.innerHTML = `
-        <div>
-          ${this._config.battery_voltage.is_used ? `<p class="header-text">${battery_voltage}</p>` : ``}
-          <p class="header-text">${battery_soc}%</p>
-        </div>
-    `;
+      let myRuntime = this.getRuntime(index);
+      if(myRuntime != 0){
+         battery_soc_info_element.innerHTML = `
+          <div>
+             ${this._config.battery_voltage.is_used ? `<p class="header-text">${battery_voltage}</p>` : ``}
+             <p class="header-text">${battery_soc}% </br>${myRuntime}</p>
+           </div>
+       `;
+      } else {
+         battery_soc_info_element.innerHTML = `
+          <div>
+             ${this._config.battery_voltage.is_used ? `<p class="header-text">${battery_voltage}</p>` : ``}
+             <p class="header-text">${battery_soc}%</p>
+           </div>
+       `;
+      }
     }
   }
+
+  getRuntime(index){
+    // Update battery runtime
+    if(
+      this._config.battery_soc?.is_used && 
+      this._config.battery_capacity_ah?.is_used &&
+      this._config.battery_voltage?.is_used &&
+      this._config.battery_discharge_live?.is_used &&
+      this._config.battery_charge_live?.is_used
+      ){
+
+      let runtime_battery_soc = cef.getEntitiesNumState(this._config, this._hass, "battery_soc", index, true, true);
+      let runtime_battery_capacity_ah    = ""
+      let runtime_battery_voltage        = ""
+      let runtime_battery_discharge_live = ""
+      let runtime_battery_charge_live    = ""
+      let runtime_home_consumption       = ""
+
+      let msg = "";
+      if (index == -1) {
+        runtime_battery_capacity_ah = parseFloat(cef.getEntitiesNumState(this._config, this._hass, "battery_capacity_ah", 0, false,false));
+        for (let i = 1; i < this._config.inverter_count; i++) {
+          let runtime_battery_capacity_ah_i = parseFloat(cef.getEntitiesNumState(this._config, this._hass, "battery_capacity_ah", i, false,false));
+          if (runtime_battery_capacity_ah_i > 0) {
+            runtime_battery_capacity_ah = runtime_battery_capacity_ah + runtime_battery_capacity_ah_i; // add battery capacity if split between inverters
+          }
+        }
+        runtime_battery_voltage = parseFloat(cef.getEntitiesNumState(this._config, this._hass, "battery_voltage", 0, false,false));
+        for (let i = 1; i < this._config.inverter_count; i++) {
+          let runtime_battery_voltage_i = parseFloat(cef.getEntitiesNumState(this._config, this._hass, "battery_voltage", i, false,false));
+          if (runtime_battery_voltage_i < runtime_battery_voltage) {
+            runtime_battery_voltage = runtime_battery_voltage_i;  // if different voltage, use smallest one
+          }
+        }
+        runtime_battery_discharge_live = parseFloat(cef.getEntitiesNumState(this._config, this._hass, "battery_discharge_live", 0, false,false));
+        for (let i = 1; i < this._config.inverter_count; i++) {
+          let runtime_battery_discharge_live_i = parseFloat(cef.getEntitiesNumState(this._config, this._hass, "battery_discharge_live", i, false,false));
+          if (runtime_battery_discharge_live_i > 0) {
+            runtime_battery_discharge_live = runtime_battery_discharge_live + runtime_battery_discharge_live_i;  // add discharge rate if split between inverters
+          }
+        }
+        runtime_battery_charge_live = parseFloat(cef.getEntitiesNumState(this._config, this._hass, "battery_charge_live", 0, false,false));
+        for (let i = 1; i < this._config.inverter_count; i++) {
+          let runtime_battery_charge_live_i = parseFloat(cef.getEntitiesNumState(this._config, this._hass, "battery_charge_live", i, false,false));
+          if (runtime_battery_charge_live_i > 0) {
+            runtime_battery_charge_live = runtime_battery_charge_live + runtime_battery_charge_live_i;  // add charge rate if split between inverters
+          }
+        }
+        runtime_home_consumption = parseFloat(cef.getEntitiesNumState(this._config, this._hass, "home_consumption", 0, false,false));
+        for (let i = 1; i < this._config.inverter_count; i++) {
+          let runtime_home_consumption_i = parseFloat(cef.getEntitiesNumState(this._config, this._hass, "home_consumption", i, false,false));
+          if (runtime_home_consumption_i > 0) {
+            runtime_home_consumption = runtime_home_consumption + runtime_home_consumption_i;  // add home consumption if split between inverters
+          }
+        }
+      } else {
+        runtime_battery_capacity_ah = parseFloat(cef.getEntitiesNumState(this._config, this._hass, "battery_capacity_ah", 0, false,false)); 
+        runtime_battery_voltage = parseFloat(cef.getEntitiesNumState(this._config, this._hass, "battery_voltage", 0));
+        runtime_battery_discharge_live = parseFloat(cef.getEntitiesNumState(this._config, this._hass, "battery_discharge_live", 0, false,false));
+        runtime_battery_charge_live = parseFloat(cef.getEntitiesNumState(this._config, this._hass, "battery_charge_live", 0, false,false));
+        runtime_home_consumption = parseFloat(cef.getEntitiesNumState(this._config, this._hass, "home_consumption", 0, false,false));
+      }
+      //console.log("#############################################################");
+      //console.log("runtime_battery_soc:" + runtime_battery_soc);
+      //console.log("runtime_battery_capacity_ah:" + runtime_battery_capacity_ah);
+      //console.log("runtime_battery_voltage:" + runtime_battery_voltage);
+      //console.log("runtime_battery_discharge_live:" + runtime_battery_discharge_live);
+      //console.log("runtime_battery_charge_live:" + runtime_battery_charge_live);
+      //console.log("runtime_home_consumption:" + runtime_home_consumption);
+      //console.log("#############################################################");
+      
+      // total energy in Wh and 80% usable
+      const totalWh    = runtime_battery_capacity_ah * runtime_battery_voltage;
+      const availWh    = totalWh * 0.80;
+      // percent above the 20% cutoff, clamped ≥ 0
+      const pctAbove20 = Math.max((runtime_battery_soc - 20) / 80, 0);
+      const currWh     = availWh * pctAbove20;
+
+      let hrs = 0;
+
+      if (runtime_battery_discharge_live > 0) {
+        // discharging → remaining running time
+        hrs = currWh / runtime_battery_discharge_live;
+        return "" + this.formatHoursToHhMm(parseFloat(hrs.toFixed(2))) + " hours to empty";
+
+      } else if (runtime_battery_charge_live > 0) {
+        // charging → time to full
+        const whToFull = totalWh * (100 - runtime_battery_soc) / 100;
+        hrs = whToFull / runtime_battery_charge_live;
+        return "" + this.formatHoursToHhMm(parseFloat(hrs.toFixed(2))) + " hours to full";
+      } else {
+        // standby → estimate if switched to battery now
+        if (runtime_home_consumption > 0) {
+          hrs = currWh / runtime_home_consumption;
+          return "" + this.formatHoursToHhMm(parseFloat(hrs.toFixed(2))) + " hours available";
+        } else {
+          hrs = 0;
+          return 0;
+        }
+      }
+      return 0;  
+    } 
+  }
+
+  formatHoursToHhMm(hoursFloat) {
+    // total whole minutes
+    const totalMins = Math.floor(hoursFloat * 60);
+    const h = Math.floor(totalMins / 60);
+    const m = totalMins % 60;
+    // pad minutes to two digits
+    const mm = m.toString().padStart(2, '0');
+    return `${h}:${mm}`;
+  }
+
 
   updateGrid(index) {
     // Arrow

@@ -71,6 +71,17 @@ export function generateStyles(config) {
     padding-top: 1.5px;
     padding-bottom: 1.5px;
   }
+  .battery-runtime-text {
+    font-size: min(2vw, 0.8em);
+    color: var(--secondary-text-color);
+    line-height: 1;
+    margin: 0;
+    padding-left: 3px;
+    padding-right: 3px;
+    padding-top: 1px;
+    padding-bottom: 1px;
+    text-align: center;
+  }
   .pv-main-text {
     font-size: min(4vw, 1em);
     font-weight: bold;
@@ -313,7 +324,7 @@ export function generateGrid(config) {
   cells += `<div class="cell"></div>`;
   cells += `<div class="cell"></div>`;
   cells += `<div id="grid-info" class="cell text-cell"></div>`; // Grid info
-
+  
   // Row 4
   if (config.energy_allocations.is_used) {
     // Power Allocations

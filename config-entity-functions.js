@@ -38,6 +38,10 @@ export function buildConfig(config) {
 
   let config_entities = [
     "battery_soc",
+    "battery_capacity_ah",
+    "battery_voltage_live",
+    "battery_discharge_live",
+    "battery_charge_live",
     "battery_flow",
     "home_consumption",
     "grid_flow",
