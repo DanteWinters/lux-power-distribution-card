@@ -135,6 +135,7 @@ class LuxPowerDistributionCard extends HTMLElement {
       "#battery-image": "battery_flow",
       "#battery-soc-info": "battery_soc",
       "#grid-image": "grid_flow",
+      "#grid-info": "grid_info",
     };
     if (!config.backup_power.is_used) {
       history_map["#home-image"] = "home_consumption";
