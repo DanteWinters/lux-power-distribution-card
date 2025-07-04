@@ -8,6 +8,22 @@ export const base_config = {
     is_used: false,
     entities: [],
   },
+  battery_capacity_ah: {
+    is_used: false,
+    entities: [],
+  },
+  battery_voltage_live: {
+    is_used: false,
+    entities: [],
+  },  
+  battery_discharge_live: {
+    is_used: false,
+    entities: [],
+  },  
+  battery_charge_live: {
+    is_used: false,
+    entities: [],
+  },
   battery_flow: {
     is_used: false,
     entities: [],
