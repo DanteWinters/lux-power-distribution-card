@@ -1,0 +1,48 @@
+{
+  "name": "lux_power_distribution_card",
+  "version": "2.0.0",
+  "description": "Lux power-distribution card",
+  "main": "dist/lux-power-distribution-card.js",
+  "type": "module",
+  "scripts": {
+    "build": "npm run lint && npm run rollup",
+    "rollup": "rollup -c rollup.config.mjs",
+    "lint": "eslint --fix src/**/*.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DanteWinters/lux-power-distribution-card.git"
+  },
+  "author": "DanteWinters",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/DanteWinters/lux-power-distribution-card/issues"
+  },
+  "homepage": "https://github.com/DanteWinters/lux-power-distribution-card#readme",
+  "dependencies": {
+    "@babel/core": "^7.25.2",
+    "@babel/plugin-proposal-decorators": "^7.24.7",
+    "@jridgewell/sourcemap-codec": "^1.5.0",
+    "@material/web": "^2.0.0",
+    "@mdi/js": "^7.4.47",
+    "@rollup/plugin-json": "^6.1.0",
+    "home-assistant-js-websocket": "^9.4.0",
+    "memoize-one": "6.0.0",
+    "lit": "3.3.0"
+  },
+  "devDependencies": {
+    "@babel/preset-env": "^7.25.3",
+    "@rollup/plugin-babel": "^6.0.4",
+    "@rollup/plugin-commonjs": "^26.0.1",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@typescript-eslint/eslint-plugin": "^8.1.0",
+    "@typescript-eslint/parser": "^8.1.0",
+    "eslint": "^9.9.0",
+    "eslint-define-config": "^2.1.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "rimraf": "^6.0.1",
+    "rollup": "^4.20.0",
+    "rollup-plugin-typescript2": "^0.36.0"
+  }
+}
