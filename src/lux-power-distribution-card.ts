@@ -327,6 +327,11 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
     return parseInt(stateObj);
   }
 
+  getEntityStateFloat(entity: string) {
+    const stateObj = this.getEntityState(entity);
+    return parseFloat(stateObj) || 0; 
+  }
+
   getEntityParallelStateInt(entity_list: string[]) {
     let total = 0;
     if (this._config) {
@@ -675,8 +680,8 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
           return `${battery_v} Vdc (avg)`;
         }
       } else {
-        battery_v = this.getEntityStateInt(this._config.battery.voltage_entities[index]);
-        return `${battery_v} Vdc`;
+        battery_v = this.getEntityStateFloat(this._config.battery.voltage_entities[index]);
+        return `${battery_v.toFixed(1)} Vdc`;
       }
     }
     return ``;
