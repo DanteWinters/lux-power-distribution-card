@@ -1,5 +1,4 @@
-import { LitElement, html, nothing, PropertyValues, unsafeCSS } from 'lit';
-import { unsafeHTML } from 'lit/directives/unsafe-html.js';
+import { LitElement, html, nothing, PropertyValues, TemplateResult } from 'lit';
 import { property, customElement, state } from 'lit/decorators.js';
 
 import { HomeAssistant, LovelaceCard, LovelaceCardEditor } from './lib/types';
@@ -95,21 +94,7 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
     afterNextRender(() => {
       this._updated = true;
     });
-    const select = this.renderRoot.querySelector('#inverter-selector') as HTMLSelectElement;
-    if (select) {
-      select.addEventListener('change', () => {
-        this._update();
-      });
-    }
 
-    const refresh_right_button = this.renderRoot.querySelector('#refresh-button-right') as HTMLButtonElement;
-    if (refresh_right_button) {
-      refresh_right_button.addEventListener('click', () => this._handleRefresh());
-    }
-    const refresh_left_button = this.renderRoot.querySelector('#refresh-button-left') as HTMLButtonElement;
-    if (refresh_left_button) {
-      refresh_left_button.addEventListener('click', () => this._handleRefresh());
-    }
     const history_graph = [
       '#solar-image',
       '#solar-info',
@@ -355,20 +340,14 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
     return '';
   }
 
-  generateArrows() {
-    let arrow_html = ``;
-    for (let i = 1; i < 5; i++) {
-      arrow_html += `<div class="arrow-${i}"><img src="${getBase64Data(base64Images.Arrow)}"></div>`;
-    }
-    return arrow_html;
+  generateArrows(): TemplateResult[] {
+    const arrowSrc = getBase64Data(base64Images.Arrow);
+    return [1, 2, 3, 4].map((i) => html`<div class="arrow-${i}"><img src=${arrowSrc} /></div>`);
   }
 
-  generateLongArrows() {
-    let arrow_html = ``;
-    for (let i = 1; i < 9; i++) {
-      arrow_html += `<div class="arrow-long-${i}"><img src="${getBase64Data(base64Images.Arrow)}"></div>`;
-    }
-    return arrow_html;
+  generateLongArrows(): TemplateResult[] {
+    const arrowSrc = getBase64Data(base64Images.Arrow);
+    return [1, 2, 3, 4, 5, 6, 7, 8].map((i) => html`<div class="arrow-long-${i}"><img src=${arrowSrc} /></div>`);
   }
 
   getIndex() {
@@ -704,465 +683,339 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
 
     // ----- Selector and index
     this.getIndex();
-    let parallel_selector = ``;
-    {
-      if (
-        this._config.inverter_count > 1 &&
-        ((this._config.parallel && this._config.parallel.aliases) ||
-          (this._config.refresh && this._config.refresh.lux_dongles))
-      ) {
-        let inv_selector_options = ``;
-        if (this._config.parallel && this._config.parallel.parallel_first) {
-          inv_selector_options += `<option value="${this._config.inverter_count}">Parallel</option>`;
-        }
-        if (this._config.parallel && this._config.parallel.aliases) {
-          for (let i = 0; i < this._config.inverter_count; i++) {
-            inv_selector_options += `<option value="${i}">${this._config.parallel.aliases[i]}</option>`;
-          }
-        }
-        if (!(this._config.parallel && this._config.parallel.parallel_first)) {
-          inv_selector_options += `<option value="${this._config.inverter_count}">Parallel</option>`;
-        }
-        parallel_selector = `
-        <select class="inv-select" name="Inverters" id="inverter-selector">
-        ${inv_selector_options}
+    let parallel_selector: TemplateResult | typeof nothing = nothing;
+    if (
+      this._config.inverter_count > 1 &&
+      ((this._config.parallel && this._config.parallel.aliases) ||
+        (this._config.refresh && this._config.refresh.lux_dongles))
+    ) {
+      const aliases = this._config.parallel?.aliases ?? [];
+      const parallelFirst = Boolean(this._config.parallel?.parallel_first);
+      parallel_selector = html`
+        <select class="inv-select" name="Inverters" id="inverter-selector" @change=${() => this._update()}>
+          ${parallelFirst ? html`<option value=${String(this._config.inverter_count)}>Parallel</option>` : nothing}
+          ${Array.from({ length: this._config.inverter_count }, (_, i) =>
+            aliases[i] !== undefined ? html`<option value=${String(i)}>${aliases[i]}</option>` : nothing
+          )}
+          ${!parallelFirst ? html`<option value=${String(this._config.inverter_count)}>Parallel</option>` : nothing}
         </select>
-        `;
-      }
+      `;
     }
 
     // ----- Title
-    let title = ``;
-    {
-      if (this._config?.title) {
-        title = `<h1 class="card-header">${this._config.title}</h1>`;
-      }
-    }
+    const title = this._config?.title ? html`<h1 class="card-header">${this._config.title}</h1>` : nothing;
 
     // ----- Refresh button
-    let refresh_button_location = '';
-    let refresh_button_right = ``;
-    let refresh_button_left = ``;
-    {
-      refresh_button_location = this._config.refresh?.button_location ? this._config.refresh.button_location : 'none';
-      refresh_button_right = `<button id="refresh-button-right" class="icon-button">
+    const refresh_button_location = this._config.refresh?.button_location || 'none';
+    const refresh_button_right = html`
+      <button id="refresh-button-right" class="icon-button" @click=${() => this._handleRefresh()}>
         <ha-icon icon="mdi:cloud-refresh"></ha-icon>
-      </button>`;
-      refresh_button_left = `<button id="refresh-button-left" class="icon-button">
+      </button>
+    `;
+    const refresh_button_left = html`
+      <button id="refresh-button-left" class="icon-button" @click=${() => this._handleRefresh()}>
         <ha-icon icon="mdi:cloud-refresh"></ha-icon>
-      </button>`;
-    }
+      </button>
+    `;
 
     // ----- Status codes
-    let status_code = ``;
-    {
-      if (this._config.status_codes?.entities) {
-        if (this._index == -1) {
-          let sts_arr: StatusMessageType[] = [];
-          this._config.status_codes.entities.forEach((entity) => {
-            sts_arr.push(this.getStatus(this.getEntityStateInt(entity)));
-          });
-          const disct_count = new Set(sts_arr.map((obj) => JSON.stringify(Object.entries(obj).sort()))).size;
-          if (disct_count == 1) {
-            status_code = this.getStatusMessage(sts_arr[0]);
-          } else {
-            const sts_arr_sorted = [...sts_arr].sort((a, b) => b.level - a.level);
-            // console.log(sts_arr_sorted);
-
-            const highest_level = sts_arr_sorted[0].level;
-            const top_level_messages = sts_arr_sorted.filter((m) => m.level === highest_level);
-
-            if (top_level_messages.length === 1) {
-              status_code = this.getStatusMessage(sts_arr_sorted[0]);
-            }
+    let status_code = '';
+    if (this._config.status_codes?.entities) {
+      if (this._index == -1) {
+        const sts_arr: StatusMessageType[] = this._config.status_codes.entities.map((entity) =>
+          this.getStatus(this.getEntityStateInt(entity))
+        );
+        const disct_count = new Set(sts_arr.map((obj) => JSON.stringify(Object.entries(obj).sort()))).size;
+        if (disct_count == 1 && sts_arr.length > 0) {
+          status_code = this.getStatusMessage(sts_arr[0]);
+        } else if (sts_arr.length > 0) {
+          const sts_arr_sorted = [...sts_arr].sort((a, b) => b.level - a.level);
+          const highest_level = sts_arr_sorted[0].level;
+          const top_level_messages = sts_arr_sorted.filter((m) => m.level === highest_level);
+          if (top_level_messages.length === 1) {
+            status_code = this.getStatusMessage(sts_arr_sorted[0]);
           }
-        } else {
-          let code = this.getEntityStateInt(this._config.status_codes.entities[this._index]);
-          status_code = this.getStatusMessage(this.getStatus(code));
         }
+      } else {
+        const code = this.getEntityStateInt(this._config.status_codes.entities[this._index]);
+        status_code = this.getStatusMessage(this.getStatus(code));
       }
     }
 
     // ----- Solar
-    let solar_info = ``;
+    let solar_info: TemplateResult | typeof nothing = nothing;
     let solar_arrow = ARROW_NONE;
-    {
-      // Arrow
-      if (
-        this._config &&
-        this._config.pv &&
-        (this._config.pv.combined_entities ||
-          this._config.pv.array_1_entities ||
-          this._config.pv.array_2_entities ||
-          this._config.pv.array_3_entities)
-      ) {
-        const combined_solar_flow = this.getSolarProductionCombined(this._index);
-        const individual_solar_flow = this.getSolarProductionIndividual(this._index);
-        solar_arrow = combined_solar_flow > 0 || individual_solar_flow > 0 ? ARROW_DOWN : ARROW_NONE;
+    if (
+      this._config.pv &&
+      (this._config.pv.combined_entities ||
+        this._config.pv.array_1_entities ||
+        this._config.pv.array_2_entities ||
+        this._config.pv.array_3_entities)
+    ) {
+      const combined_solar_flow = this.getSolarProductionCombined(this._index);
+      const individual_solar_flow = this.getSolarProductionIndividual(this._index);
+      solar_arrow = combined_solar_flow > 0 || individual_solar_flow > 0 ? ARROW_DOWN : ARROW_NONE;
 
-        if (this._config.pv.combined_entities) {
-          solar_info = `
-            <div>
-              <p class="header-text">${combined_solar_flow} W</p>
-              <p class="sub-text">${combined_solar_flow > 0 ? 'PV Power' : ''}</p>
-            </div>
-          `;
-        } else if (
-          this._config.pv.array_1_entities ||
-          this._config.pv.array_2_entities ||
-          this._config.pv.array_3_entities
-        ) {
-          if (this._index == -1) {
-            let total: number = this.getSolarProductionIndividual(this._index);
-            solar_info = `
-              <div>
-                <p class="header-text">${total} W</p>
-                <p class="sub-text">${total > 0 ? 'PV Power' : ''}</p>
-              </div>
-            `;
-          } else {
-            let lines = ``;
-            if (this._config.pv.array_1_entities) {
-              lines += `<p class="header-text">A1: ${this.getEntityStateInt(this._config.pv.array_1_entities[this._index])} W</p>`;
-            }
-            if (this._config.pv.array_2_entities) {
-              lines += `<p class="header-text">A2: ${this.getEntityStateInt(this._config.pv.array_2_entities[this._index])} W</p>`;
-            }
-            if (this._config.pv.array_3_entities) {
-              lines += `<p class="header-text">A3: ${this.getEntityStateInt(this._config.pv.array_3_entities[this._index])} W</p>`;
-            }
-            solar_info = `
-            <div>
-              ${lines}
-            </div>
-          `;
-          }
-        }
+      if (this._config.pv.combined_entities) {
+        solar_info = html`
+          <div>
+            <p class="header-text">${combined_solar_flow} W</p>
+            <p class="sub-text">${combined_solar_flow > 0 ? 'PV Power' : ''}</p>
+          </div>
+        `;
+      } else if (this._index == -1) {
+        const total = this.getSolarProductionIndividual(this._index);
+        solar_info = html`
+          <div>
+            <p class="header-text">${total} W</p>
+            <p class="sub-text">${total > 0 ? 'PV Power' : ''}</p>
+          </div>
+        `;
+      } else {
+        solar_info = html`
+          <div>
+            ${this._config.pv.array_1_entities
+              ? html`<p class="header-text">A1: ${this.getEntityStateInt(this._config.pv.array_1_entities[this._index])} W</p>`
+              : nothing}
+            ${this._config.pv.array_2_entities
+              ? html`<p class="header-text">A2: ${this.getEntityStateInt(this._config.pv.array_2_entities[this._index])} W</p>`
+              : nothing}
+            ${this._config.pv.array_3_entities
+              ? html`<p class="header-text">A3: ${this.getEntityStateInt(this._config.pv.array_3_entities[this._index])} W</p>`
+              : nothing}
+          </div>
+        `;
       }
     }
 
     // ----- Battery
-    let battery_flow_info = ``;
-    let battery_image = `<img src="${getBase64Data(base64Images.Battery5)}" />`;
+    let battery_flow_info: TemplateResult | typeof nothing = nothing;
+    let battery_image = html`<img src=${getBase64Data(base64Images.Battery5)} />`;
     let battery_arrow = ARROW_NONE;
-    let battery_soc_info = ``;
-    let battery_bottom_runtime = ``;
-    {
-      if (this._config?.battery) {
-        const battery_soc = this.getBatterySoc(this._index);
-        const battery_flow = this.getBatteryFlow(this._index);
-        battery_image = `<img src="${getBatteryImage(battery_soc)}">`;
+    let battery_soc_info: TemplateResult | typeof nothing = nothing;
+    let battery_bottom_runtime: TemplateResult | typeof nothing = nothing;
+    if (this._config.battery) {
+      const battery_soc = this.getBatterySoc(this._index);
+      const battery_flow = this.getBatteryFlow(this._index);
+      battery_image = html`<img src=${getBatteryImage(battery_soc)} />`;
 
-        let header_text = ``;
-        let sub_text = ``;
-        if (battery_flow < 0) {
-          header_text = `${Math.abs(battery_flow)} W`;
-          sub_text = `Discharge Power`;
-          battery_arrow = ARROW_RIGHT;
-        } else if (battery_flow > 0) {
-          header_text = `${battery_flow} W`;
-          sub_text = `Charge Power`;
-          battery_arrow = ARROW_LEFT;
-        } else {
-          header_text = `0 W`;
-          sub_text = `Idle`;
-          battery_arrow = ARROW_NONE;
-        }
-        battery_flow_info = `
-          <div>
-            <p class="header-text"> ${header_text} </p>
-            <p class="sub-text"> ${sub_text} </p>
-          </div>
-        `;
-        let battery_top_runtime = ``;
-        if (
-          this._config.battery.capacity_ah_entities &&
-          this._config.battery.voltage_entities &&
-          battery_flow != 0 &&
-          this._config.battery.soc_entities &&
-          battery_soc != 100 &&
-          this._config?.battery.runtime_location &&
-          ['bottom', 'left', 'both'].includes(this._config.battery.runtime_location)
-        ) {
-          let total_cap_wh = 0;
-          if (this._index == -1) {
-            for (let i = 0; i < this._config.inverter_count; i++) {
-              const cap_ah = this.getEntityStateInt(this._config.battery.capacity_ah_entities[i]);
-              const cap_wh = cap_ah * this.getEntityStateInt(this._config.battery.voltage_entities[i]);
-              total_cap_wh += cap_wh;
-            }
-          } else {
-            const cap_ah = this.getEntityStateInt(this._config.battery.capacity_ah_entities[this._index]);
-            total_cap_wh = cap_ah * this.getEntityStateInt(this._config.battery.voltage_entities[this._index]);
-            // Calculate available wh here, soc is different
-          }
-          const dod = this._config.battery.depth_of_discharge ?? 20;
-          if (battery_flow < 0) {
-            const avail_wh = (total_cap_wh * (battery_soc - dod)) / 100;
-            const rem_h = avail_wh / Math.abs(battery_flow);
-            if (['bottom', 'both'].includes(this._config.battery.runtime_location)) {
-              battery_bottom_runtime = `<p id="time-info" class="header-text">${this.convertRuntimeToString(rem_h, 'long')} remaining battery usage</p>`;
-            }
-            if (['left', 'both'].includes(this._config.battery.runtime_location)) {
-              battery_top_runtime = `<p class="header-text"> ${this.convertRuntimeToString(rem_h, 'short')} </p>`;
-            }
-          } else if (battery_flow > 0 && battery_soc < 90) {
-            const avail_wh = (total_cap_wh * (90 - battery_soc)) / 100;
-            const rem_h = avail_wh / Math.abs(battery_flow);
-            if (['bottom', 'both'].includes(this._config.battery.runtime_location)) {
-              battery_bottom_runtime = `<p id="time-info" class="header-text">${this.convertRuntimeToString(rem_h, 'long')} remaining to charge to 90%</p>`;
-            }
-            if (['left', 'both'].includes(this._config.battery.runtime_location)) {
-              battery_top_runtime = `<p class="header-text"> ${this.convertRuntimeToString(rem_h, 'short')} </p>`;
-            }
-          }
-        }
-        battery_soc_info = `
-          <div>
-            <p class="header-text"> ${battery_soc} % </p>
-            <p class="header-text"> ${this.getBatteryVoltage(this._index)}</p>
-            ${battery_top_runtime}
-          </div>
-        `;
+      let header_text = '0 W';
+      let sub_text = 'Idle';
+      if (battery_flow < 0) {
+        header_text = `${Math.abs(battery_flow)} W`;
+        sub_text = 'Discharge Power';
+        battery_arrow = ARROW_RIGHT;
+      } else if (battery_flow > 0) {
+        header_text = `${battery_flow} W`;
+        sub_text = 'Charge Power';
+        battery_arrow = ARROW_LEFT;
       }
+      battery_flow_info = html`
+        <div>
+          <p class="header-text">${header_text}</p>
+          <p class="sub-text">${sub_text}</p>
+        </div>
+      `;
+
+      let battery_top_runtime: TemplateResult | typeof nothing = nothing;
+      if (
+        this._config.battery.capacity_ah_entities &&
+        this._config.battery.voltage_entities &&
+        battery_flow != 0 &&
+        this._config.battery.soc_entities &&
+        battery_soc != 100 &&
+        this._config.battery.runtime_location &&
+        ['bottom', 'left', 'both'].includes(this._config.battery.runtime_location)
+      ) {
+        let total_cap_wh = 0;
+        if (this._index == -1) {
+          for (let i = 0; i < this._config.inverter_count; i++) {
+            const cap_ah = this.getEntityStateInt(this._config.battery.capacity_ah_entities[i]);
+            total_cap_wh += cap_ah * this.getEntityStateInt(this._config.battery.voltage_entities[i]);
+          }
+        } else {
+          const cap_ah = this.getEntityStateInt(this._config.battery.capacity_ah_entities[this._index]);
+          total_cap_wh = cap_ah * this.getEntityStateInt(this._config.battery.voltage_entities[this._index]);
+        }
+        const dod = this._config.battery.depth_of_discharge ?? 20;
+        if (battery_flow < 0) {
+          const avail_wh = (total_cap_wh * (battery_soc - dod)) / 100;
+          const rem_h = avail_wh / Math.abs(battery_flow);
+          if (['bottom', 'both'].includes(this._config.battery.runtime_location)) {
+            battery_bottom_runtime = html`<p id="time-info" class="header-text">${this.convertRuntimeToString(rem_h, 'long')} remaining battery usage</p>`;
+          }
+          if (['left', 'both'].includes(this._config.battery.runtime_location)) {
+            battery_top_runtime = html`<p class="header-text">${this.convertRuntimeToString(rem_h, 'short')}</p>`;
+          }
+        } else if (battery_flow > 0 && battery_soc < 90) {
+          const avail_wh = (total_cap_wh * (90 - battery_soc)) / 100;
+          const rem_h = avail_wh / Math.abs(battery_flow);
+          if (['bottom', 'both'].includes(this._config.battery.runtime_location)) {
+            battery_bottom_runtime = html`<p id="time-info" class="header-text">${this.convertRuntimeToString(rem_h, 'long')} remaining to charge to 90%</p>`;
+          }
+          if (['left', 'both'].includes(this._config.battery.runtime_location)) {
+            battery_top_runtime = html`<p class="header-text">${this.convertRuntimeToString(rem_h, 'short')}</p>`;
+          }
+        }
+      }
+      battery_soc_info = html`
+        <div>
+          <p class="header-text">${battery_soc} %</p>
+          <p class="header-text">${this.getBatteryVoltage(this._index)}</p>
+          ${battery_top_runtime}
+        </div>
+      `;
     }
 
     // ----- Temp
-    let temp_info = ``;
-    {
-      if (this._config?.temp?.entities) {
-        if (this._index == -1) {
-          for (let i = 0; i < this._config.inverter_count; i++) {
-            const temp = this.getEntityStateFloat(this._config.temp.entities[i]);
-            const temp_unit = this.getEntityUnit(this._config.temp.entities[i]);
-            let inv_alias = '';
-            if (this._config.parallel?.aliases) {
-              inv_alias = this._config.parallel.aliases[i];
-            } else if (this._config.refresh?.lux_dongles) {
-              inv_alias = this._config.refresh?.lux_dongles[i];
-            } else {
-              inv_alias = `Inv ${i}`;
-            }
-            temp_info += `<br />${inv_alias}: ${temp}${temp_unit}`;
-          }
-        } else {
-          const temp = this.getEntityStateFloat(this._config.temp.entities[this._index]);
-          const temp_unit = this.getEntityUnit(this._config.temp.entities[this._index]);
-          temp_info = `${temp}${temp_unit}`;
-        }
+    let temp_info: TemplateResult | string = '';
+    if (this._config.temp?.entities) {
+      if (this._index == -1) {
+        temp_info = html`${Array.from({ length: this._config.inverter_count }, (_, i) => {
+          const temp = this.getEntityStateFloat(this._config!.temp!.entities![i]);
+          const temp_unit = this.getEntityUnit(this._config!.temp!.entities![i]);
+          const inv_alias =
+            this._config!.parallel?.aliases?.[i] ??
+            this._config!.refresh?.lux_dongles?.[i] ??
+            `Inv ${i}`;
+          return html`<br />${inv_alias}: ${temp}${temp_unit}`;
+        })}`;
+      } else {
+        const temp = this.getEntityStateFloat(this._config.temp.entities[this._index]);
+        const temp_unit = this.getEntityUnit(this._config.temp.entities[this._index]);
+        temp_info = `${temp}${temp_unit}`;
       }
     }
 
-    // ----- Inverter
-    let inverter_image = ``;
-    {
-      const inverter_image = this.renderRoot.querySelector('#inverter-image') as HTMLElement;
-      if (inverter_image) {
-        if (this._index == -1) {
-          inverter_image.innerHTML = `<img src="${getBase64Data(base64Images.ParallelInverter)}" />`;
-        } else {
-          inverter_image.innerHTML = `<img src="${getBase64Data(base64Images.Inverter)}" />`;
-        }
-      }
-    }
+    // ----- Inverter (rendered declaratively via Lit html template)
+    const inverter_image = html`<img
+      src=${getBase64Data(this._index == -1 ? base64Images.ParallelInverter : base64Images.Inverter)}
+    />`;
 
     // ----- Grid
     let grid_arrow = ARROW_NONE;
-    let grid_image = ``;
-    let grid_image_class = ``;
-    let grid_info = ``;
-    {
-      const grid_flow = this.getGridFlow();
-      const gen_power = this.getGeneratorPower();
-      const grid_voltage = this.getGridVoltage();
-      const gen_voltage = this.getGeneratorVoltage();
-      let grid_emoji = ``;
-      let grid_voltage_str = '';
-      // Arrows
-      if (grid_flow < 0) {
-        grid_arrow = ARROW_LEFT;
-      } else if (grid_flow > 0) {
-        grid_arrow = ARROW_RIGHT;
-      } else if (gen_power && gen_power > 0) {
-        grid_arrow = ARROW_LEFT;
-      }
-      // Indicator
-      if (grid_voltage != null) {
-        if (grid_voltage == 0) {
-          if (this._config?.grid.indicators?.hue) {
-            grid_image_class = 'blend-overlay';
-          }
-          if (this._config?.grid.indicators?.dot) {
-            grid_emoji = ' 🔴';
-          }
-        }
-        grid_voltage_str = `${grid_voltage} Vac`;
-      } else if (gen_voltage != null) {
-        if (gen_voltage == 0) {
-          if (this._config?.grid.indicators?.hue) {
-            grid_image_class = 'blend-overlay';
-          }
-          if (this._config?.grid.indicators?.dot) {
-            grid_emoji = ' 🔴';
-          }
-        }
-        grid_voltage_str = `${gen_voltage} Vac`;
-      }
-
-      if (this._index == -1) {
-        if (this._config.grid.parallel_average_voltage) {
-          grid_voltage_str = `${grid_voltage_str} (avg)${grid_emoji}`;
-        } else {
-          grid_voltage_str = ``;
-        }
-      } else {
-        grid_voltage_str = `${grid_voltage_str}${grid_emoji}`;
-      }
-      grid_info = `
-        <div>
-          <p class="header-text">${grid_flow != null ? Math.abs(grid_flow) : gen_power != null ? Math.abs(gen_power) : 0} W</p>
-          <p class="header-text">${grid_voltage_str}</p>
-        </div>
-      `;
+    let grid_image_class = '';
+    const grid_flow = this.getGridFlow();
+    const gen_power = this.getGeneratorPower();
+    const grid_voltage = this.getGridVoltage();
+    const gen_voltage = this.getGeneratorVoltage();
+    let grid_emoji = '';
+    let grid_voltage_str = '';
+    if (grid_flow < 0) {
+      grid_arrow = ARROW_LEFT;
+    } else if (grid_flow > 0) {
+      grid_arrow = ARROW_RIGHT;
+    } else if (gen_power && gen_power > 0) {
+      grid_arrow = ARROW_LEFT;
     }
+    if (grid_voltage != null) {
+      if (grid_voltage == 0) {
+        if (this._config.grid.indicators?.hue) grid_image_class = 'blend-overlay';
+        if (this._config.grid.indicators?.dot) grid_emoji = ' 🔴';
+      }
+      grid_voltage_str = `${grid_voltage} Vac`;
+    } else if (gen_voltage != null) {
+      if (gen_voltage == 0) {
+        if (this._config.grid.indicators?.hue) grid_image_class = 'blend-overlay';
+        if (this._config.grid.indicators?.dot) grid_emoji = ' 🔴';
+      }
+      grid_voltage_str = `${gen_voltage} Vac`;
+    }
+    if (this._index == -1) {
+      grid_voltage_str = this._config.grid.parallel_average_voltage ? `${grid_voltage_str} (avg)${grid_emoji}` : '';
+    } else {
+      grid_voltage_str = `${grid_voltage_str}${grid_emoji}`;
+    }
+    const grid_info = html`
+      <div>
+        <p class="header-text">${grid_flow != null ? Math.abs(grid_flow) : gen_power != null ? Math.abs(gen_power) : 0} W</p>
+        <p class="header-text">${grid_voltage_str}</p>
+      </div>
+    `;
 
     // ----- Consumption
-    let consumption_arrow = ARROW_NONE;
-    let consumption_info = ``;
-    {
-      const home_consumption = this.getHomeConsumption(this._index);
-      const backup_consumption = this.getBackupConsumption(this._index);
-      consumption_arrow = home_consumption > 0 || backup_consumption > 0 ? ARROW_DOWN : ARROW_NONE;
-      let header_text = ``;
-      let sub_text = ``;
-      if (home_consumption > 0) {
-        header_text = `${Math.abs(home_consumption)} W`;
-        sub_text = `Home Usage`;
-      } else if (backup_consumption > 0) {
-        header_text = `${Math.abs(backup_consumption)} W`;
-        sub_text = `Backup Power`;
-      } else {
-        header_text = `0 W`;
-        sub_text = ``;
-      }
-      consumption_info = `
-        <div>
-          <p class="header-text"> ${header_text} </p>
-          <p class="sub-text"> ${sub_text} </p>
-        </div>
-      `;
-    }
+    const home_consumption = this.getHomeConsumption(this._index);
+    const backup_consumption = this.getBackupConsumption(this._index);
+    const consumption_arrow = home_consumption > 0 || backup_consumption > 0 ? ARROW_DOWN : ARROW_NONE;
+    const consumption_header =
+      home_consumption > 0
+        ? `${Math.abs(home_consumption)} W`
+        : backup_consumption > 0
+          ? `${Math.abs(backup_consumption)} W`
+          : '0 W';
+    const consumption_sub = home_consumption > 0 ? 'Home Usage' : backup_consumption > 0 ? 'Backup Power' : '';
+    const consumption_info = html`
+      <div>
+        <p class="header-text">${consumption_header}</p>
+        <p class="sub-text">${consumption_sub}</p>
+      </div>
+    `;
 
     // ----- Allocated Power
     let allocated_arrow = ARROW_NONE;
-    let allocated_info = ``;
-    {
-      if (this._config?.consumption.allocated_power_entity) {
-        const allocated_power = this.getEntityStateInt(this._config.consumption.allocated_power_entity);
-        if (allocated_power > 0) {
-          allocated_arrow = ARROW_RIGHT;
-        }
-        allocated_info = `
-          <div>
-            <p class="header-text"> ${allocated_power} W </p>
-            <p class="sub-text"> Allocated Power </p>
-          </div>
-        `;
-      }
+    let allocated_info: TemplateResult | typeof nothing = nothing;
+    if (this._config.consumption.allocated_power_entity) {
+      const allocated_power = this.getEntityStateInt(this._config.consumption.allocated_power_entity);
+      if (allocated_power > 0) allocated_arrow = ARROW_RIGHT;
+      allocated_info = html`
+        <div>
+          <p class="header-text">${allocated_power} W</p>
+          <p class="sub-text">Allocated Power</p>
+        </div>
+      `;
     }
 
     // ----- Updated time and Battery runtime
-    let updated_time_battery_runtime = ``;
-    {
-      let last_time_text = ``;
-      let time_since_text = ``;
-      if (this._config && this._config?.update_time?.entities) {
-        if (this._index == -1) {
-          if (this._config?.update_time?.has_timestamp_attribute) {
-            let oldest_update_ts = this.getEntityAttribute(this._config.update_time.entities[0], 'timestamp');
-            let oldest_update_index = 0;
-            let latest_update_ts = this.getEntityAttribute(this._config.update_time.entities[0], 'timestamp');
-            for (let i = 1; i < this._config.inverter_count; i++) {
-              let test_time = this.getEntityAttribute(this._config.update_time.entities[i], 'timestamp');
-              if (test_time < oldest_update_ts) {
-                oldest_update_ts = test_time;
-                oldest_update_index = i;
-              }
-              if (test_time > latest_update_ts) {
-                latest_update_ts = test_time;
-              }
-              const biggest_diff_sec = Math.abs(latest_update_ts - oldest_update_ts);
-              if (biggest_diff_sec < 3) {
-                const update_time = this.getEntityState(this._config.update_time.entities[oldest_update_index]);
-                if (this._config.update_time.show_datetime) {
-                  last_time_text = `<p id="time-info" class="header-text">Last update at: ${update_time}</p>`;
-                }
-                if (this._config.update_time.show_time_since) {
-                  const last_time_ts = this.getEntityAttribute(
-                    this._config.update_time.entities[oldest_update_index],
-                    'timestamp'
-                  );
-                  time_since_text = `<p id="since-info" class="header-text">Updated ${this.getTimeSince(last_time_ts)}</p>`;
-                }
-                const spacer =
-                  this._config.update_time.show_time_since && this._config.update_time.show_datetime ? `<p/>` : ``;
-                updated_time_battery_runtime = `
-                  ${last_time_text}
-                  ${spacer}
-                  ${time_since_text}
-                `;
-              } else {
-                const alias = this.getInverterAlias(oldest_update_index);
-                if (this._config.update_time.show_datetime) {
-                  last_time_text = `<p id="time-info" class="header-text">${alias} last update at: ${this.getEntityState(this._config.update_time.entities[oldest_update_index])}</p>`;
-                }
-                if (this._config.update_time.show_time_since) {
-                  const last_time_ts = this.getEntityAttribute(
-                    this._config.update_time.entities[oldest_update_index],
-                    'timestamp'
-                  );
-                  time_since_text = `<p id="since-info" class="header-text">${alias} updated ${this.getTimeSince(last_time_ts)}</p>`;
-                }
-                const spacer =
-                  this._config.update_time.show_time_since && this._config.update_time.show_datetime ? `<p/>` : ``;
-                updated_time_battery_runtime = `
-                  ${last_time_text}
-                  ${spacer}
-                  ${time_since_text}
-                `;
-              }
-            }
+    let updated_time_block: TemplateResult | typeof nothing = nothing;
+    if (this._config.update_time?.entities) {
+      if (this._index == -1 && this._config.update_time.has_timestamp_attribute) {
+        let oldest_update_ts = Number(this.getEntityAttribute(this._config.update_time.entities[0], 'timestamp'));
+        let oldest_update_index = 0;
+        let latest_update_ts = oldest_update_ts;
+        for (let i = 1; i < this._config.inverter_count; i++) {
+          const test_time = Number(this.getEntityAttribute(this._config.update_time.entities[i], 'timestamp'));
+          if (test_time < oldest_update_ts) {
+            oldest_update_ts = test_time;
+            oldest_update_index = i;
           }
-        } else {
-          const update_time = this.getEntityState(this._config.update_time.entities[this._index]);
-          if (this._config.update_time.show_datetime) {
-            last_time_text = `<p id="time-info" class="header-text">Last update at: ${update_time}</p>`;
+          if (test_time > latest_update_ts) {
+            latest_update_ts = test_time;
           }
-          if (this._config.update_time.show_time_since && this._config.update_time.has_timestamp_attribute) {
-            const last_time_ts = this.getEntityAttribute(this._config.update_time.entities[this._index], 'timestamp');
-            time_since_text = `<p id="since-info" class="header-text">Updated ${this.getTimeSince(last_time_ts)}</p>`;
-          }
-          const spacer =
-            this._config.update_time.show_time_since &&
-            this._config.update_time.show_datetime &&
-            this._config.update_time.has_timestamp_attribute
-              ? `<p/>`
-              : ``;
-          updated_time_battery_runtime = `
-            ${last_time_text}
-            ${spacer}
-            ${time_since_text}
-          `;
         }
+        const biggest_diff_sec = Math.abs(latest_update_ts - oldest_update_ts);
+        const update_state = this.getEntityState(this._config.update_time.entities[oldest_update_index]);
+        const prefix = biggest_diff_sec < 3 ? '' : `${this.getInverterAlias(oldest_update_index)} `;
+        const label_dt = biggest_diff_sec < 3 ? 'Last update at:' : `${prefix}last update at:`;
+        const label_since = biggest_diff_sec < 3 ? 'Updated' : `${prefix}updated`;
+        updated_time_block = html`
+          ${this._config.update_time.show_datetime
+            ? html`<p id="time-info" class="header-text">${label_dt} ${update_state}</p>`
+            : nothing}
+          ${this._config.update_time.show_time_since && this._config.update_time.show_datetime ? html`<p></p>` : nothing}
+          ${this._config.update_time.show_time_since
+            ? html`<p id="since-info" class="header-text">${label_since} ${this.getTimeSince(oldest_update_ts)}</p>`
+            : nothing}
+        `;
+      } else if (this._index != -1) {
+        const update_time = this.getEntityState(this._config.update_time.entities[this._index]);
+        const last_time_ts = Number(this.getEntityAttribute(this._config.update_time.entities[this._index], 'timestamp'));
+        const show_since = Boolean(this._config.update_time.show_time_since && this._config.update_time.has_timestamp_attribute);
+        updated_time_block = html`
+          ${this._config.update_time.show_datetime
+            ? html`<p id="time-info" class="header-text">Last update at: ${update_time}</p>`
+            : nothing}
+          ${show_since && this._config.update_time.show_datetime ? html`<p></p>` : nothing}
+          ${show_since
+            ? html`<p id="since-info" class="header-text">Updated ${this.getTimeSince(last_time_ts)}</p>`
+            : nothing}
+        `;
       }
     }
-    if (battery_bottom_runtime.length > 0) {
-      if (updated_time_battery_runtime.length == 0) {
-        updated_time_battery_runtime = updated_time_battery_runtime;
-      } else {
-        updated_time_battery_runtime = `${updated_time_battery_runtime}<p/>${battery_bottom_runtime}`;
-      }
-    }
+    const updated_time_battery_runtime = html`
+      ${updated_time_block}
+      ${updated_time_block !== nothing && battery_bottom_runtime !== nothing ? html`<p></p>` : nothing}
+      ${battery_bottom_runtime}
+    `;
 
     return html`
       <ha-card>
@@ -1431,99 +1284,89 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
           }
         </style>
         <div>
-          ${unsafeHTML(title)}
+          ${title}
           <card-content>
             <div id="taskbar-grid" class="status-grid">
-              <div id="select-cell" class="cell">${unsafeHTML(parallel_selector)}</div>
-              <div id="status-cell" class="cell grid-status">${unsafeHTML(status_code)}</div>
+              <div id="select-cell" class="cell">${parallel_selector}</div>
+              <div id="status-cell" class="cell grid-status">${status_code}</div>
             </div>
             <div id="card-grid" class="diagram-grid">
-              ${this._config &&
-              this._config?.pv &&
-              (this._config?.pv?.array_1_entities || this._config?.pv?.combined_entities)
+              ${this._config?.pv && (this._config?.pv?.array_1_entities || this._config?.pv?.combined_entities)
                 ? html`
                     <div class="cell"></div>
                     <div class="cell"></div>
                     <div id="solar-image" class="cell image-cell">
-                      <img src="${getBase64Data(base64Images.Solar)}" />
+                      <img src=${getBase64Data(base64Images.Solar)} />
                     </div>
-                    <div id="solar-info" class="cell text-cell">${unsafeHTML(solar_info)}</div>
+                    <div id="solar-info" class="cell text-cell">${solar_info}</div>
                     <div class="cell"></div>
                     <div class="cell"></div>
-                    <div id="battery-charge-info" class="cell text-cell">${unsafeHTML(battery_flow_info)}</div>
+                    <div id="battery-charge-info" class="cell text-cell">${battery_flow_info}</div>
                     <div class="cell"></div>
-                    <div id="solar-arrows" class="cell arrow-cell ${solar_arrow}">
-                      ${unsafeHTML(this.generateArrows())}
-                    </div>
-                    <div id="temp-info" class="cell temp-cell">${unsafeHTML(temp_info)}</div>
+                    <div id="solar-arrows" class="cell arrow-cell ${solar_arrow}">${this.generateArrows()}</div>
+                    <div id="temp-info" class="cell temp-cell">${temp_info}</div>
                     <div class="cell temp-cell"></div>
                     <div class="cell">
-                      ${['right', 'both'].includes(refresh_button_location) ? unsafeHTML(refresh_button_right) : html``}
+                      ${['right', 'both'].includes(refresh_button_location) ? refresh_button_right : nothing}
                     </div>
                   `
                 : html`
-                    <div id="battery-charge-info" class="cell text-cell">${unsafeHTML(battery_flow_info)}</div>
+                    <div id="battery-charge-info" class="cell text-cell">${battery_flow_info}</div>
                     <div class="cell"></div>
                     <div class="cell"></div>
-                    <div id="temp-info" class="cell temp-cell">${unsafeHTML(temp_info)}</div>
+                    <div id="temp-info" class="cell temp-cell">${temp_info}</div>
                     <div class="cell"></div>
                     <div class="cell">
-                      ${['right', 'both'].includes(refresh_button_location) ? unsafeHTML(refresh_button_right) : html``}
+                      ${['right', 'both'].includes(refresh_button_location) ? refresh_button_right : nothing}
                     </div>
                   `}
 
-              <div id="battery-image" class="cell image-cell">${unsafeHTML(battery_image)}</div>
-              <div id="battery-arrows" class="cell arrow-cell ${battery_arrow}">
-                ${unsafeHTML(this.generateArrows())}
-              </div>
+              <div id="battery-image" class="cell image-cell">${battery_image}</div>
+              <div id="battery-arrows" class="cell arrow-cell ${battery_arrow}">${this.generateArrows()}</div>
               <div id="inverter-image" class="cell image-cell">${inverter_image}</div>
-              <div id="grid-arrows" class="cell arrow-long-cell ${grid_arrow}">
-                ${unsafeHTML(this.generateLongArrows())}
-              </div>
+              <div id="grid-arrows" class="cell arrow-long-cell ${grid_arrow}">${this.generateLongArrows()}</div>
               <div id="grid-image" class="cell image-cell ${grid_image_class}">
-                <img src="${getBase64Data(base64Images.Grid)}" />
+                <img src=${getBase64Data(base64Images.Grid)} />
               </div>
 
-              <div id="battery-soc-info" class="cell text-cell">${unsafeHTML(battery_soc_info)}</div>
+              <div id="battery-soc-info" class="cell text-cell">${battery_soc_info}</div>
               <div class="cell"></div>
-              <div id="home-arrows" class="cell arrow-cell ${consumption_arrow}">
-                ${unsafeHTML(this.generateArrows())}
-              </div>
+              <div id="home-arrows" class="cell arrow-cell ${consumption_arrow}">${this.generateArrows()}</div>
               <div class="cell"></div>
               <div class="cell"></div>
-              <div id="grid-info" class="cell text-cell">${unsafeHTML(grid_info)}</div>
+              <div id="grid-info" class="cell text-cell">${grid_info}</div>
 
               ${this._config?.consumption.allocated_power_entity
                 ? html`
                     <div class="cell">
-                      ${['left', 'both'].includes(refresh_button_location) ? unsafeHTML(refresh_button_left) : html``}
+                      ${['left', 'both'].includes(refresh_button_location) ? refresh_button_left : nothing}
                     </div>
-                    <div id="home-info" class="cell text-cell">${unsafeHTML(consumption_info)}</div>
+                    <div id="home-info" class="cell text-cell">${consumption_info}</div>
                     <div id="home-image" class="cell image-cell">
-                      <img src="${getBase64Data(base64Images.HomeNormal)}" />
+                      <img src=${getBase64Data(base64Images.HomeNormal)} />
                     </div>
                     <div id="power-allocation-arrows" class="cell arrow-cell ${allocated_arrow}">
-                      ${unsafeHTML(this.generateArrows())}
+                      ${this.generateArrows()}
                     </div>
                     <div id="power-allocation-image" class="cell image-cell">
-                      <img src="${getBase64Data(base64Images.HomeNormal)}" />
+                      <img src=${getBase64Data(base64Images.HomeNormal)} />
                     </div>
-                    <div id="power-allocation-info" class="cell text-cell">${unsafeHTML(allocated_info)}</div>
+                    <div id="power-allocation-info" class="cell text-cell">${allocated_info}</div>
                   `
                 : html`
                     <div class="cell">
-                      ${['left', 'both'].includes(refresh_button_location) ? unsafeHTML(refresh_button_left) : html``}
+                      ${['left', 'both'].includes(refresh_button_location) ? refresh_button_left : nothing}
                     </div>
-                    <div id="home-info" class="cell text-cell">${unsafeHTML(consumption_info)}</div>
+                    <div id="home-info" class="cell text-cell">${consumption_info}</div>
                     <div id="home-image" class="cell image-cell">
-                      <img src="${getBase64Data(base64Images.HomeNormal)}" />
+                      <img src=${getBase64Data(base64Images.HomeNormal)} />
                     </div>
                     <div class="cell"></div>
                     <div class="cell"></div>
                     <div class="cell"></div>
                   `}
             </div>
-            <div class="update-time">${unsafeHTML(updated_time_battery_runtime)}</div>
+            <div class="update-time">${updated_time_battery_runtime}</div>
           </card-content>
         </div>
       </ha-card>
