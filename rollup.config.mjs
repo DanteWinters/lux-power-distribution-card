@@ -11,6 +11,8 @@ const plugins = [
   babel({
     babelHelpers: 'bundled',
     presets: ['@babel/preset-env'],
+    // Lit ships modern JS; down-levelling it breaks its array rendering (`_k is not defined`).
+    exclude: 'node_modules/**',
   }),
   terser()
 ];

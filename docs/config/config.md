@@ -33,37 +33,43 @@ Adds a title to the top of the card.
 ```yaml
 battery:
     soc_entities: list of entities # required
-    combined_soc_entity: entity # optional
     flow_entities: list of entities # conditionally required
     invert_flow: boolean # optional
-    combined_flow_entity: entity # optional
     discharge_live_entities: list of entities  # conditionally required
-    combined_discharge_live_entity: entity # optional
     charge_live_entities: list of entities # conditionally required
-    combined_charge_live_entity: entity # optional
     capacity_ah_entities: list of entities # optional
     voltage_entities: list of entities # optional
     parallel_average_voltage: boolean # optional
+    voltage_decimal: boolean # optional
     runtime_location: string # optional
     depth_of_discharge: number # optional
+    charge_target_soc: number # optional
+    shared: boolean # optional
+    shared_index: number # optional
+    parallel_flow_entity: entity # optional
+    parallel_soc_entity: entity # optional
+    show_parallel_soc_entity: boolean # optional
 ```
 
 | Config | Description |
 |---|---|
 | `soc_entities` | List of entities of the battery state-of-charge (SoC). |
-| `combined_soc_entity` | An entity that indicated the combined SoC. Used when using multiple inverters for a history graph. |
 | `flow_entities` | List of entities of the battery flow. This is when charge and discharge is combined in one entity, where  positive value is charge and negative is discharge. This is required, if `discharge_live_entities` and `charge_live_entities` are not used. |
 | `invert_flow` | When using the `flow_entities` to indicate battery flow, this flips charge and discharge. |
-| `combined_flow_entity` | An entity that indicated the combined flow. Used when using multiple inverters for a history graph. |
 | `discharge_live_entities` | List of entities of the battery discharge. This is required along with `charge_live_entities` if `flow_entities` is not used. |
-| `combined_discharge_live_entity` | An entity that indicated the combined discharge. Used when using multiple inverters for a history graph. |
 | `charge_live_entities` | List of entities of the battery charge. This is required along with `discharge_live_entities` if `flow_entities` is not used. |
-| `combined_charge_live_entity` | An entity that indicated the combined charge. Used when using multiple inverters for a history graph. |
 | `capacity_ah_entities` | List of entities of the battery capacity. Used to calculate the battery runtime remaining. |
 | `voltage_entities` | List of entities of the battery voltage. |
 | `parallel_average_voltage` | This is used when there are parallel inverters, it will average the voltages when _parallel_ is selected. Otherwise the voltage will not be show when _parallel_ is selected. |
+| `voltage_decimal` | Show the battery voltage with 1 decimal (e.g. `52.8 Vdc` instead of `52 Vdc`). |
 | `runtime_location` | Can be `left`, `bottom`, or `both`. If `capacity_ah_entities` and `voltage_entities` are used, the remaining battery runtime will be calculated.  |
 | `depth_of_discharge` | Used when the runtime is calcualted, this indicated how far the battery is set to discharge. |
+| `charge_target_soc` | The SoC the charging time is calculated to (1-150, default `90`), e.g. "remaining to charge to 90%". Values above 100 are accepted for inverters that charge past 100% (e.g. 101% for top balancing); the time is then calculated up to that value. |
+| `shared` | Set to `true` when parallel inverters share one battery bank. The SoC, voltage and capacity are then read from one inverter only, and the runtime uses the combined flow of all inverters, so every view shows the same runtime. Each inverter still shows its own charge/discharge power. |
+| `parallel_flow_entity` | An entity with the combined battery flow of all inverters. Opened as the history graph when the battery is clicked in the _Parallel_ view. |
+| `parallel_soc_entity` | An entity with the combined SoC of all inverters. Opened as the history graph in the _Parallel_ view, and shown as the SoC there if `show_parallel_soc_entity` is on. |
+| `show_parallel_soc_entity` | Show `parallel_soc_entity` as the SoC in the _Parallel_ view, instead of the average of the inverters. |
+| `shared_index` | Which inverter reports the shared battery, counting from `0` (default `0`, the first inverter). Only used with `shared`. |
 
 ### `parallel`
 
@@ -85,13 +91,48 @@ parallel:
 ```yaml
 refresh:
     lux_dongles: list of strings # conditionally required
+    action: action # optional
+    inverter_actions: list of actions # optional
     button_location: string # optional
 ```
 
 | Config | Description |
 |---|---|
 | `lux_dongles` | List of inverter serial numbers that is used for the refresh button, or as the indicators when there are multiple. This or the `aliases` in `parallel` is requried when using multiple inverters. |
-| `button_location` | The location of the refresh button. Can be `left`, `right` or `both`. |
+| `action` | A standard Home Assistant [action](https://www.home-assistant.io/dashboards/actions/) run by the refresh button instead of the LuxPower refresh service, the same as a card's `tap_action`. Use it for other integrations, e.g. to press a refresh button. It is used in the _Parallel_ view, and for any inverter without its own entry in `inverter_actions`. |
+| `inverter_actions` | Optional list of actions, one per inverter (same order as the other lists), run when that inverter is selected. In the _Parallel_ view (when `action` isn't set) every inverter is refreshed the way its own view would. Use `action: none` for an inverter that should fall back to `action`, or to its `lux_dongles` refresh. |
+| `button_location` | The location of the refresh button. Can be `left`, `right`, `both` or `none` (the default, no button). |
+
+Without `action` or `inverter_actions` the refresh button works as before, using `lux_dongles`. Both can be set in the UI editor.
+
+For example, to press another integration's refresh button(s):
+
+```yaml
+refresh:
+    button_location: right
+    action:
+        action: perform-action
+        perform_action: button.press
+        target:
+            entity_id:
+                - button.sna6000_refresh_data
+```
+
+Or one refresh button per inverter (the _Parallel_ view presses both):
+
+```yaml
+refresh:
+    button_location: right
+    inverter_actions:
+        - action: perform-action
+          perform_action: button.press
+          target:
+              entity_id: button.inverter_1_refresh
+        - action: perform-action
+          perform_action: button.press
+          target:
+              entity_id: button.inverter_2_refresh
+```
 
 ### `grid`
 
@@ -107,6 +148,7 @@ grid:
     generator_power_entities: list of entities # optional
     generator_voltage_entities: list of entities # optional
     parallel_average_voltage: boolean # optional
+    voltage_decimal: boolean # optional
 ```
 
 | Config | Description |
@@ -120,6 +162,7 @@ grid:
 | `generator_power_entities` | List of entities of the generator power. |
 | `generator_voltage_entities` | List of entities of the generator voltage. This is also used to indicate if there is no grid. |
 | `parallel_average_voltage` | This is used when there are parallel inverters, it will average the voltages when _parallel_ is selected. Otherwise the voltage will not be show when _parallel_ is selected. |
+| `voltage_decimal` | Show the grid (and generator) voltage with 1 decimal (e.g. `231.4 Vac` instead of `231 Vac`). |
 
 ### `consumption`
 
@@ -128,7 +171,7 @@ consumption:
     home_entities: list of entities # required
     combined_consumption_entity: entity # optional
     backup_entities: list of entities # optional
-    allocated_power_entities: list of entities # optional
+    allocated_power_entity: entity # optional
 ```
 
 | Config | Description |
@@ -136,7 +179,7 @@ consumption:
 | `home_entities` | List of entities for the home consumption. |
 | `combined_consumption_entity` | This is used when there are parallel inverters, it will combine the home consumption when parallel is selected. |
 | `backup_entities` | List of entities for the backup consumption. This is used when there is no power to the home consumption entities and the grid voltage is 0. |
-| `allocated_power_entities` | Optional list of entities. This is power entities that is allocated to devices. The power measurement of the entities are summed. |
+| `allocated_power_entity` | One power entity (W) for the power allocated to devices, shown next to the home. It takes a single entity, not a list: to show several devices, combine them in a helper first (see [Allocated power entity](../../README.md#allocated-power-entity)). |
 
 ### `pv`
 

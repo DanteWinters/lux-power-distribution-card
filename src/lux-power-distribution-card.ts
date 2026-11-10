@@ -3,7 +3,7 @@ import { property, customElement, state } from 'lit/decorators.js';
 
 import { HomeAssistant, LovelaceCard, LovelaceCardEditor } from './lib/types';
 
-import { LuxCardConfig, validateConfig } from './config';
+import { collectWarnings, isIncomplete, LuxCardConfig, RefreshAction, validateConfig } from './config';
 import {
   CARD_NAME,
   EDITOR_NAME,
@@ -20,6 +20,42 @@ import {
   CARD_FULL_NAME,
 } from './const';
 import { afterNextRender } from './lib/render-status';
+
+// Shown in the dashboard's card picker ("Add card"), where the card has no entities yet.
+const EXAMPLE_CONFIG: LuxCardConfig = {
+  type: `custom:${CARD_NAME}`,
+  inverter_count: 1,
+  battery: {
+    soc_entities: ['sensor.example_battery'],
+    flow_entities: ['sensor.example_battery_flow'],
+    voltage_entities: ['sensor.example_battery_voltage'],
+    capacity_ah_entities: ['sensor.example_battery_capacity'],
+    runtime_location: 'bottom',
+  },
+  grid: { flow_entities: ['sensor.example_grid_flow'], voltage_entities: ['sensor.example_grid_voltage'] },
+  consumption: { home_entities: ['sensor.example_home'] },
+  pv: { combined_entities: ['sensor.example_solar'] },
+  temp: { entities: ['sensor.example_temperature'] },
+  status_codes: { entities: ['sensor.example_status'] },
+};
+const example = (state: string, unit = '') => ({ state, attributes: unit ? { unit_of_measurement: unit } : {} });
+const EXAMPLE_STATES: Record<string, { state: string; attributes: Record<string, any> }> = {
+  'sensor.example_battery': example('72', '%'),
+  'sensor.example_battery_flow': example('900', 'W'),
+  'sensor.example_battery_voltage': example('52.8', 'V'),
+  'sensor.example_battery_capacity': example('100', 'Ah'),
+  'sensor.example_grid_flow': example('150', 'W'),
+  'sensor.example_grid_voltage': example('231', 'V'),
+  'sensor.example_home': example('1650', 'W'),
+  'sensor.example_solar': example('2400', 'W'),
+  'sensor.example_temperature': example('38', '°C'),
+  'sensor.example_status': example('4'),
+};
+
+// Power entities reported in a larger unit are converted to W.
+const POWER_UNITS_TO_W: Record<string, number> = { kW: 1000, MW: 1_000_000, GW: 1_000_000_000 };
+// Imported statically so the editor is bundled into the single file HACS installs.
+import './editor';
 import { mdiTheater } from '@mdi/js';
 
 @customElement(CARD_NAME)
@@ -42,8 +78,12 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
 
   connectedCallback() {
     super.connectedCallback();
+    if (this._inCardPicker()) this.requestUpdate();
     this._updateState();
-    this._interval = setInterval(() => this._updateState(), 500);
+    // Only "updated ... ago" changes without an entity changing, so only it needs a timer.
+    this._interval = setInterval(() => {
+      if (this._config?.update_time?.show_time_since) this._updateState();
+    }, 1000);
   }
 
   disconnectedCallback() {
@@ -51,10 +91,9 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
     if (this._interval) clearInterval(this._interval);
   }
 
-  // public static async getConfigElement(): Promise<LovelaceCardEditor> {
-  //   await import('./editor');
-  //   return document.createElement(EDITOR_NAME) as LovelaceCardEditor;
-  // }
+  public static getConfigElement(): LovelaceCardEditor {
+    return document.createElement(EDITOR_NAME) as LovelaceCardEditor;
+  }
 
   public static async getStubConfig(): Promise<LuxCardConfig> {
     return {
@@ -72,8 +111,33 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
     };
   }
 
+  // Set while required entities haven't been chosen yet; shown instead of the diagram.
+  @state() private _incomplete?: string;
+  // Config problems that don't stop the card (see collectWarnings), shown above the diagram.
+  @state() private _configWarnings: string[] = [];
+
+  // Every entity in the config: the card only re-draws when one of these changes.
+  private _entityIds: string[] = [];
+
+  protected shouldUpdate(changed: PropertyValues): boolean {
+    if (changed.size === 1 && changed.has('hass')) {
+      const old = changed.get('hass') as HomeAssistant | undefined;
+      if (old && this.hass) return this._entityIds.some((entity) => old.states[entity] !== this.hass!.states[entity]);
+    }
+    return true;
+  }
+
   setConfig(config: LuxCardConfig): void {
-    validateConfig(config);
+    this._incomplete = undefined;
+    this._configWarnings = collectWarnings(config);
+    this._entityIds = this.getConfigEntities(config);
+    try {
+      validateConfig(config);
+    } catch (err) {
+      // Not chosen yet (e.g. mid-setup in the UI editor) is not an error; anything else is.
+      if (!isIncomplete(err)) throw err;
+      this._incomplete = (err as Error).message;
+    }
     this._config = config;
     this._updated = false;
   }
@@ -82,6 +146,32 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
     super.willUpdate(_changedProperties);
     if (!this._config) return;
     this._updated = false;
+    // In the card picker, show what the card looks like instead of "finish the setup".
+    if (this._config !== EXAMPLE_CONFIG && this._inCardPicker()) {
+      this._config = EXAMPLE_CONFIG;
+      this._incomplete = undefined;
+      this._configWarnings = [];
+      this._entityIds = this.getConfigEntities(EXAMPLE_CONFIG);
+    }
+  }
+
+  private _picker = false;
+
+  // True inside "Add card" > "By card". HA's own `preview` flag is also set on dashboards in edit
+  // mode and in the edit dialog, so look for the picker element instead.
+  private _inCardPicker(): boolean {
+    if (this._picker) return true;
+    const up = (node: Node): Node | null =>
+      node.parentNode instanceof ShadowRoot ? node.parentNode.host : node.parentNode;
+    for (let node = up(this), i = 0; node && i < 40; node = up(node), i++) {
+      if ((node as Element).localName === 'hui-card-picker') return (this._picker = true);
+    }
+    return false;
+  }
+
+  // Entity states: the example's own while showing the example, otherwise Home Assistant's.
+  private get _states(): Record<string, any> {
+    return this._config === EXAMPLE_CONFIG ? EXAMPLE_STATES : (this.hass?.states ?? {});
   }
 
   private _update() {
@@ -94,7 +184,18 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
     afterNextRender(() => {
       this._updated = true;
     });
+  }
 
+  protected updated(changedProperties: PropertyValues): void {
+    super.updated(changedProperties);
+    this._bindHistoryClicks();
+  }
+
+  private _historyBound = new WeakSet<Element>();
+
+  // Bound after every update, not just the first: the diagram replaces the "finish the setup"
+  // hint, so its elements may not exist on the first render.
+  private _bindHistoryClicks() {
     const history_graph = [
       '#solar-image',
       '#solar-info',
@@ -109,35 +210,51 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
       '#power-allocation-image',
     ];
     history_graph.forEach((name) => {
-      const element = this.renderRoot.querySelector(name) as HTMLElement;
-      if (element) {
+      const element = this.renderRoot.querySelector(name);
+      if (element && !this._historyBound.has(element)) {
         element.addEventListener('click', () => this._selectHistory(name));
+        this._historyBound.add(element);
       }
     });
-  }
-
-  protected updated(changedProperties: PropertyValues): void {
-    super.updated(changedProperties);
-    if (!this._config || !this.hass || !this._updateState) return;
   }
 
   private _updateState() {
     this._update();
   }
 
+  // Refresh one inverter: its own action, else the shared `action`, else its LuxPower dongle.
+  // `allowShared` is false in Parallel, where the shared `action` has already been ruled out.
+  _refreshInverter(index: number, allowShared: boolean) {
+    const refresh = this._config?.refresh;
+    const isSet = (action?: RefreshAction): action is RefreshAction => !!action && action.action !== 'none';
+    const own = refresh?.inverter_actions?.[index];
+    if (isSet(own)) this._runAction(own);
+    else if (allowShared && isSet(refresh?.action)) this._runAction(refresh!.action);
+    else if (refresh?.lux_dongles?.[index]) {
+      (this.hass as any).callService('luxpower', 'luxpower_refresh_registers', { dongle: refresh.lux_dongles[index] });
+    }
+  }
+
+  // Let the HA frontend run it, so every action type (and confirmation) works as on built-in cards.
+  _runAction(action: RefreshAction) {
+    this.dispatchEvent(
+      new CustomEvent('hass-action', {
+        bubbles: true,
+        composed: true,
+        detail: { config: { tap_action: action }, action: 'tap' },
+      }),
+    );
+  }
+
   _handleRefresh() {
-    if (this._config?.refresh?.lux_dongles) {
-      if (this._index == -1) {
-        for (let i = 0; i < this._config.inverter_count; i++) {
-          (this.hass as any).callService('luxpower', 'luxpower_refresh_registers', {
-            dongle: this._config.refresh.lux_dongles[i],
-          });
-        }
-      } else {
-        (this.hass as any).callService('luxpower', 'luxpower_refresh_registers', {
-          dongle: this._config.refresh.lux_dongles[this._index],
-        });
-      }
+    const action = this._config?.refresh?.action;
+    if (this._index != -1) {
+      this._refreshInverter(this._index, true);
+    } else if (action && action.action !== 'none') {
+      this._runAction(action);
+    } else {
+      // Parallel without a shared action: refresh every inverter the way its own view would.
+      for (let i = 0; i < (this._config?.inverter_count ?? 0); i++) this._refreshInverter(i, false);
     }
     this._update();
   }
@@ -302,14 +419,22 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
     openNext();
   }
 
-  getEntityState(entity: string) {
-    const stateObj = this.hass!.states[entity];
-    return stateObj.state;
+  // Missing entities are caught in render(); these stay safe for unavailable or unknown states.
+  getEntityState(entity: string): string {
+    return this._states[entity]?.state ?? '';
   }
 
+  // Rounded, not cut off (52.9 V is 53 V, as in HA), and power in kW/MW/GW converted to W.
+  // Unknown or unavailable values read as 0; check isKnown() where 0 would be misleading.
   getEntityStateInt(entity: string) {
-    const stateObj = this.getEntityState(entity);
-    return parseInt(stateObj);
+    const value = parseFloat(this.getEntityState(entity));
+    if (isNaN(value)) return 0;
+    return Math.round(value * (POWER_UNITS_TO_W[this.getEntityUnit(entity)] ?? 1));
+  }
+
+  // The entity exists and has a number as its state (not unavailable/unknown).
+  isKnown(entity: string | undefined): boolean {
+    return !!entity && !isNaN(parseFloat(this.getEntityState(entity)));
   }
 
   getEntityParallelStateInt(entity_list: string[]) {
@@ -323,21 +448,51 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
   }
 
   getEntityStateFloat(entity: string) {
-    const stateObj = this.getEntityState(entity);
-    return parseFloat(stateObj);
+    const value = parseFloat(this.getEntityState(entity));
+    return isNaN(value) ? 0 : value;
   }
 
   getEntityUnit(entity: string) {
-    const stateObj = this.hass!.states[entity];
-    return stateObj.attributes.unit_of_measurement;
+    return this._states[entity]?.attributes?.unit_of_measurement ?? '';
   }
 
   getEntityAttribute(entity: string, attribute: string) {
-    const stateObj = this.hass!.states[entity];
-    if (stateObj.attributes && stateObj.attributes[attribute]) {
-      return stateObj.attributes[attribute];
+    return this._states[entity]?.attributes?.[attribute] || '';
+  }
+
+  // Config warnings plus the ones that depend on the entities' current state.
+  getWarnings(): string[] {
+    const warnings = [...this._configWarnings];
+    const missing = this.getMissingEntities();
+    if (missing.length) warnings.push(`Entities not found: ${missing.join(', ')}`);
+    if (this._config?.update_time?.has_timestamp_attribute) {
+      const without = (this._config.update_time.entities ?? []).filter((entity) => {
+        const state = this._states[entity];
+        return state && state.attributes?.timestamp === undefined;
+      });
+      if (without.length)
+        warnings.push(
+          `'update_time.has_timestamp_attribute' is on, but these have no 'timestamp' attribute, so "updated" times are wrong: ${without.join(', ')}`,
+        );
     }
-    return '';
+    return warnings;
+  }
+
+  // Every entity ID in the config (keys ending in _entity or _entities).
+  getConfigEntities(config: LuxCardConfig | undefined): string[] {
+    const found: string[] = [];
+    const walk = (value: unknown, key = '') => {
+      if (Array.isArray(value)) value.forEach((item) => walk(item, key));
+      else if (value && typeof value === 'object') Object.entries(value).forEach(([k, v]) => walk(v, k));
+      else if (typeof value === 'string' && /_entit(y|ies)$/.test(key) && value.includes('.')) found.push(value);
+    };
+    walk(config);
+    return [...new Set(found)];
+  }
+
+  // Configured entities that HA doesn't know about.
+  getMissingEntities(): string[] {
+    return this._entityIds.filter((entity) => !this._states[entity]);
   }
 
   generateArrows(): TemplateResult[] {
@@ -386,25 +541,20 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
   //////////////////////////////
 
   getTimeSince(timestamp: number) {
-    const time_now = Date.now() / 1000;
-    let diff = time_now - timestamp;
-    switch (true) {
-      case diff <= 2:
-        return `just now`;
-      case diff < 60:
-        return `${Math.round(diff)} seconds ago`;
-      case diff < 120:
-        return `1 minute ago`;
-      case diff >= 120:
-        return `${Math.round(diff / 60)} minutes ago`;
-      default:
-        return ``;
-    }
+    if (!timestamp || isNaN(timestamp)) return 'at an unknown time';
+    const diff = Date.now() / 1000 - timestamp;
+    const plural = (value: number, unit: string) => `${value} ${unit}${value == 1 ? '' : 's'} ago`;
+    if (diff <= 2) return 'just now';
+    if (diff < 60) return plural(Math.round(diff), 'second');
+    if (diff < 3600) return plural(Math.floor(diff / 60), 'minute');
+    if (diff < 86400) return plural(Math.floor(diff / 3600), 'hour');
+    return plural(Math.floor(diff / 86400), 'day');
   }
 
+  // Name shown for an inverter: its alias, else its dongle serial, else "Inverter N".
   getInverterAlias(index: number): string {
     return (
-      this._config?.parallel?.aliases?.[index] ?? this._config?.refresh?.lux_dongles?.[index] ?? `Inverter ${index}`
+      this._config?.parallel?.aliases?.[index] || this._config?.refresh?.lux_dongles?.[index] || `Inverter ${index + 1}`
     );
   }
 
@@ -478,13 +628,32 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
     return null;
   }
 
+  // Voltages are whole numbers unless the section's voltage_decimal option is on.
+  // NaN when the entity is unavailable: shown as "–" and never taken for 0 V ("no grid").
+  readVoltage(entity: string, decimal?: boolean): number {
+    if (!this.isKnown(entity)) return NaN;
+    return decimal ? this.getEntityStateFloat(entity) : this.getEntityStateInt(entity);
+  }
+
+  // Sum of all entities divided by the inverter count, as the card has always averaged.
+  averageVoltage(entities: string[], decimal?: boolean): number {
+    const sum = entities.reduce((total, entity) => total + this.readVoltage(entity, decimal), 0);
+    const average = sum / (this._config?.inverter_count || 1);
+    return decimal ? average : Math.round(average);
+  }
+
+  formatVoltage(value: number, decimal?: boolean): string {
+    if (isNaN(value)) return '–';
+    return decimal ? value.toFixed(1) : String(value);
+  }
+
   getGridVoltage() {
+    const decimal = this._config?.grid.voltage_decimal;
     if (this._config?.grid.voltage_entities) {
       if (this._index == -1) {
-        let grid_v = this.getEntityParallelStateInt(this._config.grid.voltage_entities);
-        return Math.round(grid_v / this._config.inverter_count);
+        return this.averageVoltage(this._config.grid.voltage_entities, decimal);
       } else {
-        return this.getEntityStateInt(this._config.grid.voltage_entities[this._index]);
+        return this.readVoltage(this._config.grid.voltage_entities[this._index], decimal);
       }
     }
     return null;
@@ -493,12 +662,13 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
   getGeneratorVoltage() {
     if (this._config?.grid.generator_voltage_entities) {
       if (this._index == -1) {
-        if (this._config.grid.generator_voltage_entities) {
-          return this.getEntityParallelStateInt(this._config.grid.generator_voltage_entities);
-        }
-        return null;
+        // Averaged like the grid voltage (it used to be summed: 2 x 230 V showed 460 V).
+        return this.averageVoltage(this._config.grid.generator_voltage_entities, this._config.grid.voltage_decimal);
       } else {
-        return this.getEntityStateInt(this._config.grid.generator_voltage_entities[this._index]);
+        return this.readVoltage(
+          this._config.grid.generator_voltage_entities[this._index],
+          this._config.grid.voltage_decimal,
+        );
       }
     }
     return null;
@@ -626,47 +796,54 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
     return 0;
   }
 
+  // Index of the inverter that reports the shared battery, or null when each inverter has its own.
+  getSharedBatteryIndex(): number | null {
+    if (!this._config?.battery.shared) return null;
+    return this._config.battery.shared_index ?? 0;
+  }
+
+  // NaN when the SOC entity is unavailable: shown as "–", with no runtime (rather than 0 %).
   getBatterySoc(index: number) {
-    let battery_soc = 0;
-    if (this._config?.battery.soc_entities) {
-      if (index == -1) {
-        if (this._config?.battery.parallel_soc_entity && this._config?.battery.show_parallel_soc_entity) {
-          battery_soc = this.getEntityStateInt(this._config.battery.parallel_soc_entity);
-        } else {
-          battery_soc = this.getEntityParallelStateInt(this._config.battery.soc_entities);
-          return Math.round(battery_soc / this._config.inverter_count);
-        }
-      } else {
-        battery_soc = this.getEntityStateInt(this._config.battery.soc_entities[index]);
-      }
-      return battery_soc;
+    if (!this._config?.battery.soc_entities) return 0;
+    const read = (entity: string | undefined) => (this.isKnown(entity) ? this.getEntityStateInt(entity!) : NaN);
+    const shared = this.getSharedBatteryIndex();
+    if (shared !== null) return read(this._config.battery.soc_entities[shared]);
+    if (index != -1) return read(this._config.battery.soc_entities[index]);
+    if (this._config.battery.parallel_soc_entity && this._config.battery.show_parallel_soc_entity) {
+      return read(this._config.battery.parallel_soc_entity);
     }
-    return 0;
+    const all = this._config.battery.soc_entities.map(read);
+    return Math.round(all.reduce((total, soc) => total + soc, 0) / this._config.inverter_count);
   }
 
   getBatteryVoltage(index: number) {
-    let battery_v = 0;
+    const decimal = this._config?.battery.voltage_decimal;
     if (this._config?.battery.voltage_entities) {
-      if (index == -1) {
+      const shared = this.getSharedBatteryIndex();
+      if (shared !== null) {
+        const battery_v = this.readVoltage(this._config.battery.voltage_entities[shared], decimal);
+        return `${this.formatVoltage(battery_v, decimal)} Vdc`;
+      } else if (index == -1) {
         if (this._config?.battery?.parallel_average_voltage) {
-          battery_v = this.getEntityParallelStateInt(this._config.battery.voltage_entities);
-          battery_v = Math.round(battery_v / this._config.inverter_count);
-          return `${battery_v} Vdc (avg)`;
+          const average = this.averageVoltage(this._config.battery.voltage_entities, decimal);
+          return `${this.formatVoltage(average, decimal)} Vdc (avg)`;
         }
       } else {
-        battery_v = this.getEntityStateInt(this._config.battery.voltage_entities[index]);
-        return `${battery_v} Vdc`;
+        const battery_v = this.readVoltage(this._config.battery.voltage_entities[index], decimal);
+        return `${this.formatVoltage(battery_v, decimal)} Vdc`;
       }
     }
     return ``;
   }
 
   convertRuntimeToString(runtime: number, format: string) {
-    const hours = Math.floor(runtime);
-    const minutes = Math.round((runtime % 1) * 60);
+    // Count whole minutes first, so rounding can't produce "2h, 60m".
+    const total = Math.round(runtime * 60);
+    const hours = Math.floor(total / 60);
+    const minutes = total % 60;
     switch (format) {
       case 'short':
-        return `${hours}:${minutes} remaining`;
+        return `${hours}:${String(minutes).padStart(2, '0')} remaining`;
       case 'long':
         return `${hours}h, ${minutes}m`;
       default:
@@ -681,21 +858,37 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
   protected render() {
     if (!this._config || !this.hass) return nothing;
 
+    if (this._incomplete) {
+      return html`
+        <ha-card>
+          <div style="padding: 16px; color: var(--secondary-text-color);">
+            <p style="margin: 0 0 4px; font-weight: 500; color: var(--primary-text-color);">Finish the setup</p>
+            <p style="margin: 0;">${this._incomplete}</p>
+          </div>
+        </ha-card>
+      `;
+    }
+
+    // Warn but keep rendering (missing values read as 0), so configs that worked before still show.
+    const warnings = this.getWarnings();
+    const missing_warning = warnings.length
+      ? html`<div style="padding: 8px 16px 0; color: var(--warning-color, #ffa600); font-size: 13px; line-height: 1.4;">
+          ${warnings.map((warning) => html`<div>⚠ ${warning}</div>`)}
+        </div>`
+      : nothing;
+
     // ----- Selector and index
     this.getIndex();
     let parallel_selector: TemplateResult | typeof nothing = nothing;
-    if (
-      this._config.inverter_count > 1 &&
-      ((this._config.parallel && this._config.parallel.aliases) ||
-        (this._config.refresh && this._config.refresh.lux_dongles))
-    ) {
-      const aliases = this._config.parallel?.aliases ?? [];
+    // Every multi-inverter card gets the selector, with a name for every inverter.
+    if (this._config.inverter_count > 1) {
       const parallelFirst = Boolean(this._config.parallel?.parallel_first);
       parallel_selector = html`
         <select class="inv-select" name="Inverters" id="inverter-selector" @change=${() => this._update()}>
           ${parallelFirst ? html`<option value=${String(this._config.inverter_count)}>Parallel</option>` : nothing}
-          ${Array.from({ length: this._config.inverter_count }, (_, i) =>
-            aliases[i] !== undefined ? html`<option value=${String(i)}>${aliases[i]}</option>` : nothing
+          ${Array.from(
+            { length: this._config.inverter_count },
+            (_, i) => html`<option value=${String(i)}>${this.getInverterAlias(i)}</option>`,
           )}
           ${!parallelFirst ? html`<option value=${String(this._config.inverter_count)}>Parallel</option>` : nothing}
         </select>
@@ -723,7 +916,7 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
     if (this._config.status_codes?.entities) {
       if (this._index == -1) {
         const sts_arr: StatusMessageType[] = this._config.status_codes.entities.map((entity) =>
-          this.getStatus(this.getEntityStateInt(entity))
+          this.getStatus(this.getEntityStateInt(entity)),
         );
         const disct_count = new Set(sts_arr.map((obj) => JSON.stringify(Object.entries(obj).sort()))).size;
         if (disct_count == 1 && sts_arr.length > 0) {
@@ -774,15 +967,27 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
       } else {
         solar_info = html`
           <div>
-            ${this._config.pv.array_1_entities
-              ? html`<p class="header-text">A1: ${this.getEntityStateInt(this._config.pv.array_1_entities[this._index])} W</p>`
-              : nothing}
-            ${this._config.pv.array_2_entities
-              ? html`<p class="header-text">A2: ${this.getEntityStateInt(this._config.pv.array_2_entities[this._index])} W</p>`
-              : nothing}
-            ${this._config.pv.array_3_entities
-              ? html`<p class="header-text">A3: ${this.getEntityStateInt(this._config.pv.array_3_entities[this._index])} W</p>`
-              : nothing}
+            ${
+              this._config.pv.array_1_entities
+                ? html`<p class="header-text">
+                    A1: ${this.getEntityStateInt(this._config.pv.array_1_entities[this._index])} W
+                  </p>`
+                : nothing
+            }
+            ${
+              this._config.pv.array_2_entities
+                ? html`<p class="header-text">
+                    A2: ${this.getEntityStateInt(this._config.pv.array_2_entities[this._index])} W
+                  </p>`
+                : nothing
+            }
+            ${
+              this._config.pv.array_3_entities
+                ? html`<p class="header-text">
+                    A3: ${this.getEntityStateInt(this._config.pv.array_3_entities[this._index])} W
+                  </p>`
+                : nothing
+            }
           </div>
         `;
       }
@@ -797,7 +1002,9 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
     if (this._config.battery) {
       const battery_soc = this.getBatterySoc(this._index);
       const battery_flow = this.getBatteryFlow(this._index);
-      battery_image = html`<img src=${getBatteryImage(battery_soc)} />`;
+      battery_image = isNaN(battery_soc)
+        ? html`<img src=${getBase64Data(base64Images.Battery5)} style="opacity: 0.35" />`
+        : html`<img src=${getBatteryImage(battery_soc)} />`;
 
       let header_text = '0 W';
       let sub_text = 'Idle';
@@ -818,17 +1025,25 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
       `;
 
       let battery_top_runtime: TemplateResult | typeof nothing = nothing;
+      // A shared battery is drained by every inverter, so its runtime uses the combined flow in every view.
+      const shared = this.getSharedBatteryIndex();
+      const runtime_flow = shared === null ? battery_flow : this.getBatteryFlow(-1);
       if (
         this._config.battery.capacity_ah_entities &&
         this._config.battery.voltage_entities &&
-        battery_flow != 0 &&
+        runtime_flow != 0 &&
+        !isNaN(battery_soc) &&
         this._config.battery.soc_entities &&
         battery_soc != 100 &&
         this._config.battery.runtime_location &&
         ['bottom', 'left', 'both'].includes(this._config.battery.runtime_location)
       ) {
         let total_cap_wh = 0;
-        if (this._index == -1) {
+        if (shared !== null) {
+          // Count the shared bank once, not once per inverter.
+          const cap_ah = this.getEntityStateInt(this._config.battery.capacity_ah_entities[shared]);
+          total_cap_wh = cap_ah * this.getEntityStateInt(this._config.battery.voltage_entities[shared]);
+        } else if (this._index == -1) {
           for (let i = 0; i < this._config.inverter_count; i++) {
             const cap_ah = this.getEntityStateInt(this._config.battery.capacity_ah_entities[i]);
             total_cap_wh += cap_ah * this.getEntityStateInt(this._config.battery.voltage_entities[i]);
@@ -838,20 +1053,37 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
           total_cap_wh = cap_ah * this.getEntityStateInt(this._config.battery.voltage_entities[this._index]);
         }
         const dod = this._config.battery.depth_of_discharge ?? 20;
-        if (battery_flow < 0) {
-          const avail_wh = (total_cap_wh * (battery_soc - dod)) / 100;
-          const rem_h = avail_wh / Math.abs(battery_flow);
+        const charge_target = this._config.battery.charge_target_soc ?? 90;
+        if (runtime_flow < 0 && battery_soc <= dod) {
+          // Still discharging below the depth of discharge: say so, rather than show a negative time.
+          // It usually means the inverter's cut-off is set lower than depth_of_discharge.
+          const where = battery_soc == dod ? 'At' : 'Below';
           if (['bottom', 'both'].includes(this._config.battery.runtime_location)) {
-            battery_bottom_runtime = html`<p id="time-info" class="header-text">${this.convertRuntimeToString(rem_h, 'long')} remaining battery usage</p>`;
+            battery_bottom_runtime = html`<p id="time-info" class="header-text">
+              ${where} the ${dod}% depth of discharge
+            </p>`;
+          }
+          if (['left', 'both'].includes(this._config.battery.runtime_location)) {
+            battery_top_runtime = html`<p class="header-text">${where} ${dod}%</p>`;
+          }
+        } else if (runtime_flow < 0 && total_cap_wh > 0) {
+          const avail_wh = (total_cap_wh * (battery_soc - dod)) / 100;
+          const rem_h = avail_wh / Math.abs(runtime_flow);
+          if (['bottom', 'both'].includes(this._config.battery.runtime_location)) {
+            battery_bottom_runtime = html`<p id="time-info" class="header-text">
+              ${this.convertRuntimeToString(rem_h, 'long')} remaining battery usage
+            </p>`;
           }
           if (['left', 'both'].includes(this._config.battery.runtime_location)) {
             battery_top_runtime = html`<p class="header-text">${this.convertRuntimeToString(rem_h, 'short')}</p>`;
           }
-        } else if (battery_flow > 0 && battery_soc < 90) {
-          const avail_wh = (total_cap_wh * (90 - battery_soc)) / 100;
-          const rem_h = avail_wh / Math.abs(battery_flow);
+        } else if (runtime_flow > 0 && battery_soc < charge_target && total_cap_wh > 0) {
+          const avail_wh = (total_cap_wh * (charge_target - battery_soc)) / 100;
+          const rem_h = avail_wh / Math.abs(runtime_flow);
           if (['bottom', 'both'].includes(this._config.battery.runtime_location)) {
-            battery_bottom_runtime = html`<p id="time-info" class="header-text">${this.convertRuntimeToString(rem_h, 'long')} remaining to charge to 90%</p>`;
+            battery_bottom_runtime = html`<p id="time-info" class="header-text">
+              ${this.convertRuntimeToString(rem_h, 'long')} remaining to charge to ${charge_target}%
+            </p>`;
           }
           if (['left', 'both'].includes(this._config.battery.runtime_location)) {
             battery_top_runtime = html`<p class="header-text">${this.convertRuntimeToString(rem_h, 'short')}</p>`;
@@ -860,7 +1092,7 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
       }
       battery_soc_info = html`
         <div>
-          <p class="header-text">${battery_soc} %</p>
+          <p class="header-text">${isNaN(battery_soc) ? '–' : battery_soc} %</p>
           <p class="header-text">${this.getBatteryVoltage(this._index)}</p>
           ${battery_top_runtime}
         </div>
@@ -872,18 +1104,14 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
     if (this._config.temp?.entities) {
       if (this._index == -1) {
         temp_info = html`${Array.from({ length: this._config.inverter_count }, (_, i) => {
-          const temp = this.getEntityStateFloat(this._config!.temp!.entities![i]);
-          const temp_unit = this.getEntityUnit(this._config!.temp!.entities![i]);
-          const inv_alias =
-            this._config!.parallel?.aliases?.[i] ??
-            this._config!.refresh?.lux_dongles?.[i] ??
-            `Inv ${i}`;
-          return html`<br />${inv_alias}: ${temp}${temp_unit}`;
+          const entity = this._config!.temp!.entities![i];
+          const temp = this.isKnown(entity) ? this.getEntityStateFloat(entity) : '–';
+          return html`<br />${this.getInverterAlias(i)}: ${temp}${this.getEntityUnit(entity)}`;
         })}`;
       } else {
-        const temp = this.getEntityStateFloat(this._config.temp.entities[this._index]);
-        const temp_unit = this.getEntityUnit(this._config.temp.entities[this._index]);
-        temp_info = `${temp}${temp_unit}`;
+        const entity = this._config.temp.entities[this._index];
+        const temp = this.isKnown(entity) ? this.getEntityStateFloat(entity) : '–';
+        temp_info = `${temp}${this.getEntityUnit(entity)}`;
       }
     }
 
@@ -913,13 +1141,13 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
         if (this._config.grid.indicators?.hue) grid_image_class = 'blend-overlay';
         if (this._config.grid.indicators?.dot) grid_emoji = ' 🔴';
       }
-      grid_voltage_str = `${grid_voltage} Vac`;
+      grid_voltage_str = `${this.formatVoltage(grid_voltage, this._config.grid.voltage_decimal)} Vac`;
     } else if (gen_voltage != null) {
       if (gen_voltage == 0) {
         if (this._config.grid.indicators?.hue) grid_image_class = 'blend-overlay';
         if (this._config.grid.indicators?.dot) grid_emoji = ' 🔴';
       }
-      grid_voltage_str = `${gen_voltage} Vac`;
+      grid_voltage_str = `${this.formatVoltage(gen_voltage, this._config.grid.voltage_decimal)} Vac`;
     }
     if (this._index == -1) {
       grid_voltage_str = this._config.grid.parallel_average_voltage ? `${grid_voltage_str} (avg)${grid_emoji}` : '';
@@ -928,7 +1156,9 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
     }
     const grid_info = html`
       <div>
-        <p class="header-text">${grid_flow != null ? Math.abs(grid_flow) : gen_power != null ? Math.abs(gen_power) : 0} W</p>
+        <p class="header-text">
+          ${grid_flow != null ? Math.abs(grid_flow) : gen_power != null ? Math.abs(gen_power) : 0} W
+        </p>
         <p class="header-text">${grid_voltage_str}</p>
       </div>
     `;
@@ -988,26 +1218,38 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
         const label_dt = biggest_diff_sec < 3 ? 'Last update at:' : `${prefix}last update at:`;
         const label_since = biggest_diff_sec < 3 ? 'Updated' : `${prefix}updated`;
         updated_time_block = html`
-          ${this._config.update_time.show_datetime
-            ? html`<p id="time-info" class="header-text">${label_dt} ${update_state}</p>`
-            : nothing}
+          ${
+            this._config.update_time.show_datetime
+              ? html`<p id="time-info" class="header-text">${label_dt} ${update_state}</p>`
+              : nothing
+          }
           ${this._config.update_time.show_time_since && this._config.update_time.show_datetime ? html`<p></p>` : nothing}
-          ${this._config.update_time.show_time_since
-            ? html`<p id="since-info" class="header-text">${label_since} ${this.getTimeSince(oldest_update_ts)}</p>`
-            : nothing}
+          ${
+            this._config.update_time.show_time_since
+              ? html`<p id="since-info" class="header-text">${label_since} ${this.getTimeSince(oldest_update_ts)}</p>`
+              : nothing
+          }
         `;
       } else if (this._index != -1) {
         const update_time = this.getEntityState(this._config.update_time.entities[this._index]);
-        const last_time_ts = Number(this.getEntityAttribute(this._config.update_time.entities[this._index], 'timestamp'));
-        const show_since = Boolean(this._config.update_time.show_time_since && this._config.update_time.has_timestamp_attribute);
+        const last_time_ts = Number(
+          this.getEntityAttribute(this._config.update_time.entities[this._index], 'timestamp'),
+        );
+        const show_since = Boolean(
+          this._config.update_time.show_time_since && this._config.update_time.has_timestamp_attribute,
+        );
         updated_time_block = html`
-          ${this._config.update_time.show_datetime
-            ? html`<p id="time-info" class="header-text">Last update at: ${update_time}</p>`
-            : nothing}
+          ${
+            this._config.update_time.show_datetime
+              ? html`<p id="time-info" class="header-text">Last update at: ${update_time}</p>`
+              : nothing
+          }
           ${show_since && this._config.update_time.show_datetime ? html`<p></p>` : nothing}
-          ${show_since
-            ? html`<p id="since-info" class="header-text">Updated ${this.getTimeSince(last_time_ts)}</p>`
-            : nothing}
+          ${
+            show_since
+              ? html`<p id="since-info" class="header-text">Updated ${this.getTimeSince(last_time_ts)}</p>`
+              : nothing
+          }
         `;
       }
     }
@@ -1284,42 +1526,44 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
           }
         </style>
         <div>
-          ${title}
+          ${title} ${missing_warning}
           <card-content>
             <div id="taskbar-grid" class="status-grid">
               <div id="select-cell" class="cell">${parallel_selector}</div>
               <div id="status-cell" class="cell grid-status">${status_code}</div>
             </div>
             <div id="card-grid" class="diagram-grid">
-              ${this._config?.pv && (this._config?.pv?.array_1_entities || this._config?.pv?.combined_entities)
-                ? html`
-                    <div class="cell"></div>
-                    <div class="cell"></div>
-                    <div id="solar-image" class="cell image-cell">
-                      <img src=${getBase64Data(base64Images.Solar)} />
-                    </div>
-                    <div id="solar-info" class="cell text-cell">${solar_info}</div>
-                    <div class="cell"></div>
-                    <div class="cell"></div>
-                    <div id="battery-charge-info" class="cell text-cell">${battery_flow_info}</div>
-                    <div class="cell"></div>
-                    <div id="solar-arrows" class="cell arrow-cell ${solar_arrow}">${this.generateArrows()}</div>
-                    <div id="temp-info" class="cell temp-cell">${temp_info}</div>
-                    <div class="cell temp-cell"></div>
-                    <div class="cell">
-                      ${['right', 'both'].includes(refresh_button_location) ? refresh_button_right : nothing}
-                    </div>
-                  `
-                : html`
-                    <div id="battery-charge-info" class="cell text-cell">${battery_flow_info}</div>
-                    <div class="cell"></div>
-                    <div class="cell"></div>
-                    <div id="temp-info" class="cell temp-cell">${temp_info}</div>
-                    <div class="cell"></div>
-                    <div class="cell">
-                      ${['right', 'both'].includes(refresh_button_location) ? refresh_button_right : nothing}
-                    </div>
-                  `}
+              ${
+                this._config?.pv && (this._config?.pv?.array_1_entities || this._config?.pv?.combined_entities)
+                  ? html`
+                      <div class="cell"></div>
+                      <div class="cell"></div>
+                      <div id="solar-image" class="cell image-cell">
+                        <img src=${getBase64Data(base64Images.Solar)} />
+                      </div>
+                      <div id="solar-info" class="cell text-cell">${solar_info}</div>
+                      <div class="cell"></div>
+                      <div class="cell"></div>
+                      <div id="battery-charge-info" class="cell text-cell">${battery_flow_info}</div>
+                      <div class="cell"></div>
+                      <div id="solar-arrows" class="cell arrow-cell ${solar_arrow}">${this.generateArrows()}</div>
+                      <div id="temp-info" class="cell temp-cell">${temp_info}</div>
+                      <div class="cell temp-cell"></div>
+                      <div class="cell">
+                        ${['right', 'both'].includes(refresh_button_location) ? refresh_button_right : nothing}
+                      </div>
+                    `
+                  : html`
+                      <div id="battery-charge-info" class="cell text-cell">${battery_flow_info}</div>
+                      <div class="cell"></div>
+                      <div class="cell"></div>
+                      <div id="temp-info" class="cell temp-cell">${temp_info}</div>
+                      <div class="cell"></div>
+                      <div class="cell">
+                        ${['right', 'both'].includes(refresh_button_location) ? refresh_button_right : nothing}
+                      </div>
+                    `
+              }
 
               <div id="battery-image" class="cell image-cell">${battery_image}</div>
               <div id="battery-arrows" class="cell arrow-cell ${battery_arrow}">${this.generateArrows()}</div>
@@ -1336,35 +1580,37 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
               <div class="cell"></div>
               <div id="grid-info" class="cell text-cell">${grid_info}</div>
 
-              ${this._config?.consumption.allocated_power_entity
-                ? html`
-                    <div class="cell">
-                      ${['left', 'both'].includes(refresh_button_location) ? refresh_button_left : nothing}
-                    </div>
-                    <div id="home-info" class="cell text-cell">${consumption_info}</div>
-                    <div id="home-image" class="cell image-cell">
-                      <img src=${getBase64Data(base64Images.HomeNormal)} />
-                    </div>
-                    <div id="power-allocation-arrows" class="cell arrow-cell ${allocated_arrow}">
-                      ${this.generateArrows()}
-                    </div>
-                    <div id="power-allocation-image" class="cell image-cell">
-                      <img src=${getBase64Data(base64Images.HomeNormal)} />
-                    </div>
-                    <div id="power-allocation-info" class="cell text-cell">${allocated_info}</div>
-                  `
-                : html`
-                    <div class="cell">
-                      ${['left', 'both'].includes(refresh_button_location) ? refresh_button_left : nothing}
-                    </div>
-                    <div id="home-info" class="cell text-cell">${consumption_info}</div>
-                    <div id="home-image" class="cell image-cell">
-                      <img src=${getBase64Data(base64Images.HomeNormal)} />
-                    </div>
-                    <div class="cell"></div>
-                    <div class="cell"></div>
-                    <div class="cell"></div>
-                  `}
+              ${
+                this._config?.consumption.allocated_power_entity
+                  ? html`
+                      <div class="cell">
+                        ${['left', 'both'].includes(refresh_button_location) ? refresh_button_left : nothing}
+                      </div>
+                      <div id="home-info" class="cell text-cell">${consumption_info}</div>
+                      <div id="home-image" class="cell image-cell">
+                        <img src=${getBase64Data(base64Images.HomeNormal)} />
+                      </div>
+                      <div id="power-allocation-arrows" class="cell arrow-cell ${allocated_arrow}">
+                        ${this.generateArrows()}
+                      </div>
+                      <div id="power-allocation-image" class="cell image-cell">
+                        <img src=${getBase64Data(base64Images.HomeNormal)} />
+                      </div>
+                      <div id="power-allocation-info" class="cell text-cell">${allocated_info}</div>
+                    `
+                  : html`
+                      <div class="cell">
+                        ${['left', 'both'].includes(refresh_button_location) ? refresh_button_left : nothing}
+                      </div>
+                      <div id="home-info" class="cell text-cell">${consumption_info}</div>
+                      <div id="home-image" class="cell image-cell">
+                        <img src=${getBase64Data(base64Images.HomeNormal)} />
+                      </div>
+                      <div class="cell"></div>
+                      <div class="cell"></div>
+                      <div class="cell"></div>
+                    `
+              }
             </div>
             <div class="update-time">${updated_time_battery_runtime}</div>
           </card-content>
