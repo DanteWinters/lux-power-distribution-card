@@ -312,6 +312,24 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
     return parseInt(stateObj);
   }
 
+  // charge_target: the SoC (%) the charge-time estimate counts up to. A number, an
+  // entity id ("number.x"), or a list of entity ids, one per inverter (the parallel
+  // view uses the first). Default 90%; values above 100 count as 100, since some
+  // inverters use 101 for top balancing.
+  getChargeTarget(): number {
+    const cfg = this._config?.battery.charge_target;
+    let value: number = NaN;
+    if (typeof cfg === 'number') {
+      value = cfg;
+    } else if (typeof cfg === 'string') {
+      value = isNaN(Number(cfg)) ? parseFloat(this.hass?.states[cfg]?.state ?? '') : Number(cfg);
+    } else if (Array.isArray(cfg) && cfg.length > 0) {
+      const entity = cfg[Math.min(Math.max(this._index, 0), cfg.length - 1)];
+      value = parseFloat(this.hass?.states[entity]?.state ?? '');
+    }
+    return Math.min(isNaN(value) ? 90 : value, 100);
+  }
+
   getEntityParallelStateInt(entity_list: string[]) {
     let total = 0;
     if (this._config) {
@@ -838,6 +856,7 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
           total_cap_wh = cap_ah * this.getEntityStateInt(this._config.battery.voltage_entities[this._index]);
         }
         const dod = this._config.battery.depth_of_discharge ?? 20;
+        const charge_target = this.getChargeTarget();
         if (battery_flow < 0) {
           const avail_wh = (total_cap_wh * (battery_soc - dod)) / 100;
           const rem_h = avail_wh / Math.abs(battery_flow);
@@ -847,11 +866,11 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
           if (['left', 'both'].includes(this._config.battery.runtime_location)) {
             battery_top_runtime = html`<p class="header-text">${this.convertRuntimeToString(rem_h, 'short')}</p>`;
           }
-        } else if (battery_flow > 0 && battery_soc < 90) {
-          const avail_wh = (total_cap_wh * (90 - battery_soc)) / 100;
+        } else if (battery_flow > 0 && battery_soc < charge_target) {
+          const avail_wh = (total_cap_wh * (charge_target - battery_soc)) / 100;
           const rem_h = avail_wh / Math.abs(battery_flow);
           if (['bottom', 'both'].includes(this._config.battery.runtime_location)) {
-            battery_bottom_runtime = html`<p id="time-info" class="header-text">${this.convertRuntimeToString(rem_h, 'long')} remaining to charge to 90%</p>`;
+            battery_bottom_runtime = html`<p id="time-info" class="header-text">${this.convertRuntimeToString(rem_h, 'long')} remaining to charge to ${charge_target}%</p>`;
           }
           if (['left', 'both'].includes(this._config.battery.runtime_location)) {
             battery_top_runtime = html`<p class="header-text">${this.convertRuntimeToString(rem_h, 'short')}</p>`;
