@@ -46,6 +46,7 @@ battery:
     parallel_average_voltage: boolean # optional
     runtime_location: string # optional
     depth_of_discharge: number # optional
+    charge_target: number, entity or list of entities # optional
 ```
 
 | Config | Description |
@@ -64,6 +65,7 @@ battery:
 | `parallel_average_voltage` | This is used when there are parallel inverters, it will average the voltages when _parallel_ is selected. Otherwise the voltage will not be show when _parallel_ is selected. |
 | `runtime_location` | Can be `left`, `bottom`, or `both`. If `capacity_ah_entities` and `voltage_entities` are used, the remaining battery runtime will be calculated.  |
 | `depth_of_discharge` | Used when the runtime is calcualted, this indicated how far the battery is set to discharge. |
+| `charge_target` | Used when the runtime is calculated while charging: the SoC (%) the "remaining to charge to" estimate counts up to. A number (default 90), an entity whose state is the percentage (e.g. the inverter's charge SOC limit), or a list of entities, one per inverter (the parallel view uses the first). Values above 100 count as 100. Falls back to 90 when the value isn't numeric. |
 
 ### `parallel`
 
