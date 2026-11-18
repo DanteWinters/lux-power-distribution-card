@@ -85,12 +85,16 @@ parallel:
 ```yaml
 refresh:
     lux_dongles: list of strings # conditionally required
+    button_entities: list of entities # optional
+    parallel_button_entity: entity # optional
     button_location: string # optional
 ```
 
 | Config | Description |
 |---|---|
 | `lux_dongles` | List of inverter serial numbers that is used for the refresh button, or as the indicators when there are multiple. This or the `aliases` in `parallel` is requried when using multiple inverters. |
+| `button_entities` | Button entities to press when the refresh button is clicked, one per inverter (same order as the inverters), for integrations that expose a refresh button instead of the LuxpowerTek service. The parallel view presses all of them, or `parallel_button_entity` if set. Can be used with or without `lux_dongles`. |
+| `parallel_button_entity` | A single button entity pressed in the parallel view instead of every `button_entities` entry, e.g. a whole parallel group's refresh button. |
 | `button_location` | The location of the refresh button. Can be `left`, `right` or `both`. |
 
 ### `grid`

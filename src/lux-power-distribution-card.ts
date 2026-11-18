@@ -139,6 +139,21 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
         });
       }
     }
+    // Any integration that exposes a refresh button entity.
+    const buttons = this._config?.refresh?.button_entities;
+    if (buttons && buttons.length > 0) {
+      let targets: string[];
+      if (this._index == -1) {
+        const group = this._config!.refresh!.parallel_button_entity;
+        targets = group ? [group] : buttons.slice(0, this._config!.inverter_count);
+      } else {
+        const own = buttons[this._index];
+        targets = own ? [own] : [];
+      }
+      for (const entity_id of targets) {
+        (this.hass as any).callService('button', 'press', { entity_id });
+      }
+    }
     this._update();
   }
 

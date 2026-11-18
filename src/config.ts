@@ -27,6 +27,8 @@ export type ParallelConfig = {
 
 export type RefreshConfig = {
   lux_dongles?: string[];
+  button_entities?: string[]; // button entities pressed on refresh, one per inverter
+  parallel_button_entity?: string; // pressed in the parallel view instead of every button_entities entry
   button_location?: string;
 };
 
