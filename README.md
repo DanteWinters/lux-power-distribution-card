@@ -17,7 +17,7 @@ This card has been added to the list of default HACS frontend elements. Search f
 
 ## Adding the card to the dashboard
 
-Currently, the UI editor does not work. The only way to add the card is to add the `yaml` code. There are examples in [config](/docs/config/config.md) document.
+Every option can be set in the UI editor, or in `yaml`. The editor also lists what is still needed to finish the setup, and warns about options the card would ignore (typos, old option names, lists with the wrong number of entries). There are examples in [config](/docs/config/config.md) document.
 
 ## LuxpowerTek integration
 
@@ -25,9 +25,9 @@ The LuxpowerTek integration is hosted in a private repository by [Guy Wells](htt
 
 ## Refresh and the Dongle serial number
 
-This refresh only works for the LuxPowerTek integration referenced above. The service name and function call format are hard-coded.
+By default the refresh button calls the LuxPowerTek integration's refresh service for the dongles in *refresh.lux_dongles*. To use another integration, set *refresh.action* to any Home Assistant action (for example pressing that integration's refresh button); see [config](/docs/config/config.md).
 
-The location of the refresh button can be set with the *refresh_button_location* config value. There are 4 accepted values for this config:
+The location of the refresh button can be set with the *refresh.button_location* config value. There are 4 accepted values for this config:
 
 - left (Displayed on the left hand side, below the battery text.)
 - right (Displayed on the right hand side, above the grid image.)
@@ -36,7 +36,15 @@ The location of the refresh button can be set with the *refresh_button_location*
 
 ## Allocated power entity
 
-The *allocated_power_entity* is an entity for allocated power in your house. It is a helper group of summed entities, that allow you to see how much of your power is assigned to devices. The reason this is a single grouped item, is because then it works well with the history graph.
+The *allocated_power_entity* shows how much of your power goes to specific devices (for example a geyser, pool pump and heat pump). It takes **one** entity, not a list. To combine several devices, create a helper that adds them up:
+
+1. Go to **Settings → Devices & services → Helpers → Create helper → Group → Sensor group**.
+2. Give it a name, set **Type** to **Sum**, and add the power sensors (W) of the devices.
+3. Use the new helper as `consumption.allocated_power_entity` (it can also be picked in the UI editor).
+
+A single helper also gives one clean history graph when you click it on the card.
+
+Older versions of these docs described a list called *allocated_power_entities*; that option was never read by the card.
 
 ## Grid indicators
 

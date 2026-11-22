@@ -25,7 +25,7 @@ export interface HomeAssistant {
   callApi: <T>(
     method: 'GET' | 'POST' | 'PUT' | 'DELETE',
     path: string,
-    parameters?: { [key: string]: any }
+    parameters?: { [key: string]: any },
   ) => Promise<T>;
   fetchWithAuth: (path: string, init?: { [key: string]: any }) => Promise<Response>;
   sendWS: (msg: MessageBase) => Promise<void>;

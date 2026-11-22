@@ -1,4 +1,4 @@
-import { defineConfig } from 'eslint-define-config';
+import { defineConfig } from 'eslint/config';
 import tsParser from '@typescript-eslint/parser';
 import tsPlugin from '@typescript-eslint/eslint-plugin';
 import prettierPlugin from 'eslint-plugin-prettier';
