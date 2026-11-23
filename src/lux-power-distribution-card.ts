@@ -478,13 +478,13 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
     return warnings;
   }
 
-  // Every entity ID in the config (keys ending in _entity or _entities).
+  // Every entity ID in the config (keys ending in _entity or _entities, and plain `entities` lists).
   getConfigEntities(config: LuxCardConfig | undefined): string[] {
     const found: string[] = [];
     const walk = (value: unknown, key = '') => {
       if (Array.isArray(value)) value.forEach((item) => walk(item, key));
       else if (value && typeof value === 'object') Object.entries(value).forEach(([k, v]) => walk(v, k));
-      else if (typeof value === 'string' && /_entit(y|ies)$/.test(key) && value.includes('.')) found.push(value);
+      else if (typeof value === 'string' && /(^|_)entit(y|ies)$/.test(key) && value.includes('.')) found.push(value);
     };
     walk(config);
     return [...new Set(found)];
