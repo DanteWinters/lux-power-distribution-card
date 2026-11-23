@@ -56,6 +56,8 @@ export type GridConfig = {
   indicators?: GridHueConfig;
   generator_power_entities?: string[];
   generator_voltage_entities?: string[];
+  generator_frequency_entity?: string; // the generator's own frequency (Hz), shown while it's in the grid's place
+  generator_thd_entity?: string; // the generator's own voltage THD (%), shown while it's in the grid's place
   parallel_average_voltage?: boolean;
   voltage_decimal?: boolean; // show grid and generator voltage with 1 decimal
 };
@@ -268,6 +270,8 @@ const KNOWN_OPTIONS: Record<string, string[]> = {
     'indicators',
     'generator_power_entities',
     'generator_voltage_entities',
+    'generator_frequency_entity',
+    'generator_thd_entity',
     'parallel_average_voltage',
     'voltage_decimal',
   ],

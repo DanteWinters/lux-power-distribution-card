@@ -147,6 +147,8 @@ grid:
         dot: boolean # optional
     generator_power_entities: list of entities # optional
     generator_voltage_entities: list of entities # optional
+    generator_frequency_entity: entity # optional
+    generator_thd_entity: entity # optional
     parallel_average_voltage: boolean # optional
     voltage_decimal: boolean # optional
 ```
@@ -159,8 +161,10 @@ grid:
 | `voltage_entities` | List of entities of the grid voltage. This is also used to indicate if there is no grid. |
 | `indicators.hue` | If set and the grid voltage drops to 0, the grid image will become dimmer. (Requires the `voltage_entities`.) |
 | `indicators.dot` | If set and the grid voltage drops to 0, a red indicator will be added next to the grid voltage text. (Requires the `voltage_entities`). |
-| `generator_power_entities` | List of entities of the generator power. |
-| `generator_voltage_entities` | List of entities of the generator voltage. This is also used to indicate if there is no grid. |
+| `generator_power_entities` | List of entities of the generator power, one per inverter (the power each inverter takes from the generator). While the generator's power is above 0 and the grid is idle (0 W) or down (0 V), the generator is shown in the grid's place: its icon, its power labelled "Generator" and its voltage, without the `indicators`. Otherwise the grid is shown as usual. In the _Parallel_ view the power is added up. |
+| `generator_voltage_entities` | List of entities of the generator voltage, one per inverter. Shown while the generator is in the grid's place; averaged in the _Parallel_ view. Without `voltage_entities` it's also used to indicate if there is no grid, as before. |
+| `generator_frequency_entity` | One entity with the generator's frequency (Hz). Shown under its voltage while it's in the grid's place. |
+| `generator_thd_entity` | One entity with the generator's voltage THD (%). Shown under its voltage while it's in the grid's place. |
 | `parallel_average_voltage` | This is used when there are parallel inverters, it will average the voltages when _parallel_ is selected. Otherwise the voltage will not be show when _parallel_ is selected. |
 | `voltage_decimal` | Show the grid (and generator) voltage with 1 decimal (e.g. `231.4 Vac` instead of `231 Vac`). |
 
