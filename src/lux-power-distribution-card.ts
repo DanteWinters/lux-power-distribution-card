@@ -478,13 +478,13 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
     return warnings;
   }
 
-  // Every entity ID in the config (keys ending in _entity or _entities).
+  // Every entity ID in the config (keys ending in _entity or _entities, and plain `entities` lists).
   getConfigEntities(config: LuxCardConfig | undefined): string[] {
     const found: string[] = [];
     const walk = (value: unknown, key = '') => {
       if (Array.isArray(value)) value.forEach((item) => walk(item, key));
       else if (value && typeof value === 'object') Object.entries(value).forEach(([k, v]) => walk(v, k));
-      else if (typeof value === 'string' && /_entit(y|ies)$/.test(key) && value.includes('.')) found.push(value);
+      else if (typeof value === 'string' && /(^|_)entit(y|ies)$/.test(key) && value.includes('.')) found.push(value);
     };
     walk(config);
     return [...new Set(found)];
@@ -1129,14 +1129,24 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
     const gen_voltage = this.getGeneratorVoltage();
     let grid_emoji = '';
     let grid_voltage_str = '';
-    if (grid_flow < 0) {
+    // The generator takes the grid's place while it produces power and the grid is idle (0 W) or down (0 V).
+    const gen_in_grid_place = gen_power != null && gen_power > 0 && (grid_flow == 0 || grid_voltage == 0);
+    const gen_frequency_entity = this._config.grid.generator_frequency_entity;
+    const gen_thd_entity = this._config.grid.generator_thd_entity;
+    const gen_frequency = this.isKnown(gen_frequency_entity) ? this.getEntityStateFloat(gen_frequency_entity!) : null;
+    const gen_thd = this.isKnown(gen_thd_entity) ? this.getEntityStateFloat(gen_thd_entity!) : null;
+    if (gen_in_grid_place) {
+      grid_arrow = ARROW_LEFT;
+    } else if (grid_flow < 0) {
       grid_arrow = ARROW_LEFT;
     } else if (grid_flow > 0) {
       grid_arrow = ARROW_RIGHT;
-    } else if (gen_power && gen_power > 0) {
-      grid_arrow = ARROW_LEFT;
     }
-    if (grid_voltage != null) {
+    if (gen_in_grid_place) {
+      // A running generator isn't a "no grid" state, so no hue/dot indicators.
+      if (gen_voltage != null)
+        grid_voltage_str = `${this.formatVoltage(gen_voltage, this._config.grid.voltage_decimal)} Vac`;
+    } else if (grid_voltage != null) {
       if (grid_voltage == 0) {
         if (this._config.grid.indicators?.hue) grid_image_class = 'blend-overlay';
         if (this._config.grid.indicators?.dot) grid_emoji = ' 🔴';
@@ -1156,10 +1166,11 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
     }
     const grid_info = html`
       <div>
-        <p class="header-text">
-          ${grid_flow != null ? Math.abs(grid_flow) : gen_power != null ? Math.abs(gen_power) : 0} W
-        </p>
+        <p class="header-text">${gen_in_grid_place ? Math.abs(gen_power!) : Math.abs(grid_flow)} W</p>
+        ${gen_in_grid_place ? html`<p class="sub-text">Generator</p>` : nothing}
         <p class="header-text">${grid_voltage_str}</p>
+        ${gen_in_grid_place && gen_frequency != null ? html`<p class="sub-text">${gen_frequency.toFixed(1)} Hz</p>` : nothing}
+        ${gen_in_grid_place && gen_thd != null ? html`<p class="sub-text">THD ${gen_thd.toFixed(1)}%</p>` : nothing}
       </div>
     `;
 
@@ -1352,6 +1363,10 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
           }
 
           /* IMAGE CELLS */
+          /* The generator icon is a little larger than the tower; scale it to match. */
+          #grid-image.gen-in-grid img {
+            transform: scale(0.8);
+          }
           .image-cell img {
             margin: auto;
             display: flex;
@@ -1569,8 +1584,11 @@ class LuxPowerDistributionCard extends LitElement implements LovelaceCard {
               <div id="battery-arrows" class="cell arrow-cell ${battery_arrow}">${this.generateArrows()}</div>
               <div id="inverter-image" class="cell image-cell">${inverter_image}</div>
               <div id="grid-arrows" class="cell arrow-long-cell ${grid_arrow}">${this.generateLongArrows()}</div>
-              <div id="grid-image" class="cell image-cell ${grid_image_class}">
-                <img src=${getBase64Data(base64Images.Grid)} />
+              <div
+                id="grid-image"
+                class="cell image-cell ${grid_image_class} ${gen_in_grid_place ? 'gen-in-grid' : ''}"
+              >
+                <img src=${getBase64Data(gen_in_grid_place ? base64Images.Generator : base64Images.Grid)} />
               </div>
 
               <div id="battery-soc-info" class="cell text-cell">${battery_soc_info}</div>

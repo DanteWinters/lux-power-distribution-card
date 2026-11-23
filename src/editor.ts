@@ -559,10 +559,10 @@ export class LuxPowerDistributionCardEditor extends LitElement implements Lovela
           ${this._renderSwitch('Show a red dot when there is no grid voltage', 'grid.indicators.dot', config.grid?.indicators?.dot)}
           ${this._advanced(
             'grid-generator',
-            'Generator (experimental)',
+            'Generator',
             html`<div class="note">
-                Generator support is still limited: with no grid, the card may show the generator at 0 W / 0 V (issue
-                #66).
+                While the generator produces power and the grid is idle (0 W) or down (0 V), it's shown in the grid's
+                place.
               </div>
               ${this._renderEntityPickers(
                 'Generator Power Entities',
@@ -577,7 +577,9 @@ export class LuxPowerDistributionCardEditor extends LitElement implements Lovela
                 config.grid?.generator_voltage_entities,
                 inverterCount,
                 true,
-              )}`,
+              )}
+              ${this._renderEntity('Generator Frequency (optional)', 'grid.generator_frequency_entity', config.grid?.generator_frequency_entity)}
+              ${this._renderEntity('Generator Voltage THD (optional)', 'grid.generator_thd_entity', config.grid?.generator_thd_entity)}`,
           )}
           ${
             multi
